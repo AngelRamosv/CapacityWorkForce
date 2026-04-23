@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const LiveDashboard: React.FC = () => {
     const [data, setData] = useState<any>(null);
+    const [coverageInfo, setCoverageInfo] = useState<any>(null);
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -37,7 +38,7 @@ const LiveDashboard: React.FC = () => {
             const retPool = pools.find(p => p.nombre.toLowerCase().includes('retencion') || p.nombre.toLowerCase().includes('retención'));
             // Respaldo: el primero que encuentre de la lista real
             const poolId = retPool ? retPool.id : (pools.length > 0 ? pools[0].id : null);
-            
+
             if (!poolId) {
                 alert('No se ha detectado ninguna campaña activa (Retención/Móvil). Por favor, refresca la página o revisa la configuración.');
                 return;
@@ -69,12 +70,14 @@ const LiveDashboard: React.FC = () => {
         const fetchData = async () => {
             try {
                 const res = await api.get('/live');
+                const covRes = await api.get('/live/coverage').catch(() => null);
                 if (isMounted) {
                     setData(res.data);
+                    if (covRes && covRes.data) setCoverageInfo(covRes.data);
                     setError(null);
                     setLastUpdate(new Date());
                 }
-                
+
                 // Cargar pools para tener el ID correcto
                 const poolsRes = await api.get('/pools');
                 setPools(poolsRes.data);
@@ -152,13 +155,13 @@ const LiveDashboard: React.FC = () => {
 
     if (elapsedMinutes > 0) {
         if (elapsedMinutes > totalOperatingMinutes) elapsedMinutes = totalOperatingMinutes;
-        
+
         percentOfDayPassed = elapsedMinutes / totalOperatingMinutes;
         metaAlCorte = Math.round(metasLlamadas * percentOfDayPassed);
-        
+
         // Si la meta es 0 (muy temprano), evitamos división por cero
-        porcentajeCumplimientoCorte = metaAlCorte > 0 
-            ? Math.round((llamadasReales / metaAlCorte) * 100) 
+        porcentajeCumplimientoCorte = metaAlCorte > 0
+            ? Math.round((llamadasReales / metaAlCorte) * 100)
             : 0;
     }
     // Si es antes de las 9 AM, se queda todo en 0.
@@ -388,7 +391,7 @@ const LiveDashboard: React.FC = () => {
                                 <Clock className="text-amber-500" size={18} />
                                 <h4 className="font-bold text-gray-800 text-sm">Monitor de Puntualidad</h4>
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-4 mb-6">
                                 <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100">
                                     <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Retardo Entrada (Login)</p>
@@ -439,6 +442,116 @@ const LiveDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* MONITOR DE COBERTURA INTRADIA */}
+            {coverageInfo && (
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mt-8">
+                    <div className="flex items-center justify-between gap-3 mb-6 border-b border-gray-50 pb-4">
+                        <div className="flex items-center gap-3">
+                            <Activity className="text-indigo-500" size={24} />
+                            <div>
+                                <h3 className="text-lg font-black text-gray-800">Tendencia de Volumen (Histograma Operativo)</h3>
+                                <p className="text-xs text-gray-500">
+                                    {coverageInfo.isWeekend ? 'Operación fin de semana. Acumulados y seguimiento de meta base.' : 'Compara el avance de volumen real vs esperado para determinar traslados de personal.'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row gap-8 mb-6">
+                        {/* Acumulado Global (Izquierda) */}
+                        <div className="w-full md:w-1/3 flex flex-col justify-center bg-gray-50/50 p-6 rounded-2xl border border-gray-50">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Total Acumulado (En Vivo)</p>
+                            <p className="text-5xl font-black text-indigo-600 mb-1">{data?.llamadas_ingresadas || 0}</p>
+                            <p className="text-xs font-bold text-gray-400 mb-6 tracking-wide">LLAMADAS RECIBIDAS</p>
+
+                            <div className="pt-4 border-t border-gray-200/60">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Meta Fija Esperada del Día</p>
+                                <p className="text-2xl font-black text-gray-700">{coverageInfo.dailyGoal || 0} <span className="text-xs font-medium text-gray-400">llamadas</span></p>
+                            </div>
+                        </div>
+
+                        {/* Histograma (Derecha) */}
+                        <div className="w-full md:w-2/3 h-64 relative border-b-2 border-gray-100 pb-6 flex items-end justify-between px-2 pt-10">
+                            {/* Eje Y de fondo */}
+                            <div className="absolute inset-0 z-0 flex flex-col justify-between pointer-events-none pb-6">
+                                <div className="border-b border-gray-100 w-full h-0"></div>
+                                <div className="border-b border-gray-100 w-full h-0"></div>
+                                <div className="border-b border-gray-100 w-full h-0"></div>
+                                <div className="border-b border-gray-100 w-full h-0"></div>
+                            </div>
+
+                            {/* Línea Expected Promedio */}
+                            <div
+                                className="absolute left-0 right-0 border-b-2 border-dashed border-indigo-200 z-0 pointer-events-none"
+                                style={{ bottom: '35%' }}
+                            >
+                                <span className="absolute -top-5 right-0 text-[9px] font-bold text-indigo-400 bg-white px-2">Nivel Esperado: {coverageInfo.averageExpectedPerHour || 0}/h</span>
+                            </div>
+
+                            {/* Barras Horarias (Real vs Esperado) */}
+                            {coverageInfo.hourlyData?.map((item: any, i: number) => {
+                                const maxCalls = Math.max(...coverageInfo.hourlyData.map((d: any) => Math.max(d.realCalls || 0, d.expected)), coverageInfo.averageExpectedPerHour || 1);
+
+                                const baseVal = item.realCalls !== null ? item.realCalls : item.expected;
+                                const heightPct = maxCalls > 0 ? (baseVal / maxCalls) * 100 : 0;
+
+                                let barColor = 'bg-gray-200 group-hover:bg-gray-300'; // Horas futuras (Pronóstico)
+                                if (item.realCalls !== null) {
+                                    barColor = item.realCalls >= item.expected ? 'bg-emerald-400 group-hover:bg-emerald-500' : 'bg-amber-400 group-hover:bg-amber-500';
+                                }
+
+                                return (
+                                    <div key={i} className="flex flex-col items-center group relative w-full h-full justify-end z-10 px-0.5 sm:px-1">
+                                        <div className="absolute -top-14 bg-gray-800 text-white text-[10px] font-bold py-2 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition shadow-lg pointer-events-none z-10 text-left border border-gray-700 leading-tight min-w-[110px]">
+                                            <p className="border-b border-gray-600 pb-1 mb-1 text-gray-400 uppercase tracking-wider text-center">{item.hour}</p>
+                                            <div className="flex justify-between items-center mb-0.5">
+                                                <span className="text-gray-300">Meta:</span>
+                                                <span className="text-gray-100">{item.expected}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-300">Reales:</span>
+                                                <span className={item.realCalls >= item.expected ? 'text-emerald-400' : 'text-amber-400'}>{item.realCalls !== null ? item.realCalls : '--'}</span>
+                                            </div>
+                                        </div>
+                                        <div
+                                            className={`w-full rounded-t-sm transition-all duration-1000 ease-out cursor-pointer ${barColor}`}
+                                            style={{ height: `${Math.max(2, heightPct)}%` }}
+                                        />
+                                        <p className="text-[10px] font-bold mt-2 text-gray-400 absolute -bottom-6 whitespace-nowrap">{item.hour.split(' ')[0]}</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="flex justify-center gap-6 mt-4">
+                            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-400 rounded-[2px]" /><span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Superó Meta</span></div>
+                            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-amber-400 rounded-[2px]" /><span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Bajo Meta</span></div>
+                            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-gray-200 rounded-[2px]" /><span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Pronóstico</span></div>
+                        </div>
+                    </div>
+
+                    <div className="mt-2">
+                        {/* Estado y Sugerencia Operativa Discreta */}
+                        <div className={`p-5 rounded-2xl border ${coverageInfo.status === 'rojo' ? 'bg-rose-50 border-rose-200 shadow-[0_0_15px_-3px_rgba(251,113,133,0.3)]' : 'bg-transparent border-gray-100'
+                            }`}>
+                            <div className="flex items-start gap-4">
+                                <div className="mt-1">
+                                    <AlertTriangle size={24} className={coverageInfo.status === 'rojo' ? 'text-rose-600 animate-pulse' : 'text-gray-400'} />
+                                </div>
+                                <div>
+                                    <p className={`font-black text-sm uppercase tracking-wider mb-1 ${coverageInfo.status === 'rojo' ? 'text-rose-800' : 'text-gray-500'}`}>
+                                        {coverageInfo.status === 'rojo' ? '¡ACCION REQUERIDA (18:00+)!' : 'Cobertura Operativa Controlada'}
+                                    </p>
+                                    <p className={`text-sm font-bold leading-relaxed ${coverageInfo.status === 'rojo' ? 'text-rose-700' : 'text-gray-400'}`}>
+                                        {coverageInfo.suggestion}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };

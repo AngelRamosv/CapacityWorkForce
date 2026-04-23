@@ -28,10 +28,10 @@ router.put('/pools/:id', async (req, res) => {
         const { totalAgentes, agentesNocturnos } = req.body;
         const campana = await Campana.findByPk(req.params.id);
         if (!campana) return res.status(404).json({ error: 'Campaña no encontrada' });
-        
+
         if (totalAgentes !== undefined) campana.totalAgentes = totalAgentes;
         if (agentesNocturnos !== undefined) campana.agentesNocturnos = agentesNocturnos;
-        
+
         await campana.save();
         res.json(campana);
     } catch (error) {
@@ -85,46 +85,53 @@ router.post('/staff/sync', async (req, res) => {
             const rowValues = Object.values(row).map(v => (v || '').toString().toLowerCase());
             const rowStr = rowValues.join(' ');
             const isMovil = rowStr.includes('movil') || rowStr.includes('móvil');
-            
-            let isNocturno = false;
-            let scheduledTime = '09:00'; 
-            let shiftName = 'Matutino';
 
-            const turnoDirecto = (row['Turno'] || row['turno'] || row['TURNO'] || '').toString().trim();
-            if (turnoDirecto) {
-                const turnoLow = turnoDirecto.toLowerCase();
-                if (turnoLow.includes('nocturno') || turnoLow.includes('noche')) {
-                    isNocturno = true;
-                    shiftName = 'Nocturno';
-                    scheduledTime = '23:00';
-                } else if (turnoLow.includes('vespertino') || turnoLow.includes('tarde')) {
-                    shiftName = 'Vespertino';
-                    scheduledTime = '12:00';
-                } else {
-                    shiftName = 'Matutino';
-                    scheduledTime = '09:00';
-                }
-            } else {
-                for (const key of Object.keys(row)) {
-                    const val = (row[key] || '').toString().toLowerCase();
-                    const keyLow = key.toLowerCase();
-                    if (possibleColumns.some(pc => keyLow.includes(pc))) {
-                        const timeMatch = val.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]/);
-                        if (timeMatch) {
-                            scheduledTime = timeMatch[0];
-                            const startHour = parseInt(timeMatch[0].split(':')[0]);
-                            if (startHour >= 22 || startHour <= 2) {
-                                isNocturno = true;
-                                shiftName = 'Nocturno';
-                            } else if (startHour >= 12) {
-                                shiftName = 'Vespertino';
-                            }
+            let isNocturno = false;
+            let scheduledTime = '09:00';
+            let shiftName = 'Matutino';
+            let timeFound = false;
+
+            // PRIMERO: Buscar hora explícita en las columnas (ej. Horario 2)
+            for (const key of Object.keys(row)) {
+                const val = (row[key] || '').toString().toLowerCase();
+                const keyLow = key.toLowerCase();
+                if (possibleColumns.some(pc => keyLow.includes(pc))) {
+                    const timeMatch = val.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]/);
+                    if (timeMatch) {
+                        scheduledTime = timeMatch[0];
+                        const startHour = parseInt(timeMatch[0].split(':')[0]);
+                        if (startHour >= 22 || startHour <= 2) {
+                            isNocturno = true;
+                            shiftName = 'Nocturno';
+                        } else if (startHour >= 11) {
+                            shiftName = 'Vespertino';
                         }
+                        timeFound = true;
+                        break;
                     }
                 }
             }
 
-            const nameColumn = Object.keys(row).find(key => 
+            // SEGUNDO: Si no encontró hora explícita, usar la palabra Turno como respaldo
+            if (!timeFound) {
+                const turnoDirecto = (row['Turno'] || row['turno'] || row['TURNO'] || '').toString().trim();
+                if (turnoDirecto) {
+                    const turnoLow = turnoDirecto.toLowerCase();
+                    if (turnoLow.includes('nocturno') || turnoLow.includes('noche')) {
+                        isNocturno = true;
+                        shiftName = 'Nocturno';
+                        scheduledTime = '23:00';
+                    } else if (turnoLow.includes('vespertino') || turnoLow.includes('tarde')) {
+                        shiftName = 'Vespertino';
+                        scheduledTime = '11:00';
+                    } else {
+                        shiftName = 'Matutino';
+                        scheduledTime = '09:00';
+                    }
+                }
+            }
+
+            const nameColumn = Object.keys(row).find(key =>
                 ['nombre', 'agente', 'colaborador', 'staff', 'name'].some(n => key.toLowerCase().includes(n))
             ) || Object.keys(row)[0];
 
@@ -218,10 +225,10 @@ router.get('/live', async (req, res) => {
         }
 
         if (realData.llamadas_ingresadas !== undefined) {
-          realData.llamadas_ingresadas = Math.max(0, realData.llamadas_ingresadas - offsetCalls);
+            realData.llamadas_ingresadas = Math.max(0, realData.llamadas_ingresadas - offsetCalls);
         }
         if (realData.abandonadas_total !== undefined) {
-          realData.abandonadas_total = Math.max(0, realData.abandonadas_total - offsetAbandoned);
+            realData.abandonadas_total = Math.max(0, realData.abandonadas_total - offsetAbandoned);
         }
 
         // --- CORRECCIÓN DE LLAVES DE TIEMPO ---
@@ -231,9 +238,9 @@ router.get('/live', async (req, res) => {
         }
 
         const todayAttendance = await Asistencia.findAll({
-            where: { 
-                fecha: today, 
-                estatusAsistencia: { [Op.in]: ['Retardo', 'Ausente'] } 
+            where: {
+                fecha: today,
+                estatusAsistencia: { [Op.in]: ['Retardo', 'Ausente'] }
             }
         });
 
@@ -243,6 +250,29 @@ router.get('/live', async (req, res) => {
             totalLoginDelay: retardos.reduce((sum, a) => sum + a.minutosRetardo, 0),
             tardyEntrants: retardos.map(a => ({ name: a.nombreAgente, delay: a.minutosRetardo }))
         };
+
+        // --- SISTEMA INTELIGENTE DE TRACKING ---
+        const fs = require('fs');
+        const path = require('path');
+        const hFile = path.join(__dirname, '../data/historicalVolume.json');
+
+        let histData = {};
+        try { if (fs.existsSync(hFile)) histData = JSON.parse(fs.readFileSync(hFile)); } catch (e) { }
+
+        const cHour = new Date().getHours().toString();
+        const dateStr = today;
+
+        if (!histData[dateStr]) histData[dateStr] = {};
+
+        const currentIn = parseFloat(realData.llamadas_ingresadas || 0);
+        if (currentIn > 0 && (!histData[dateStr][cHour] || currentIn > histData[dateStr][cHour])) {
+            histData[dateStr][cHour] = currentIn;
+            try {
+                if (!fs.existsSync(path.join(__dirname, '../data'))) fs.mkdirSync(path.join(__dirname, '../data'));
+                fs.writeFileSync(hFile, JSON.stringify(histData));
+            } catch (e) { console.error('Error guardando histórico:', e); }
+        }
+        // ---------------------------------------
 
         res.json(realData);
     } catch (error) {
@@ -263,6 +293,127 @@ router.post('/live/reset', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// Endpoint Inteligente para cálculo de Cobertura Intradía
+router.get('/live/coverage', async (req, res) => {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const dateInMexico = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+        const dayOfWeek = dateInMexico.getDay(); 
+        const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Mexico_City' });
+
+        let baseTotal = 3195;
+        if (dayOfWeek === 6) baseTotal = 1500;
+        else if (dayOfWeek === 0) baseTotal = 780;
+
+        let histData = {};
+        try {
+            const hFile = path.join(__dirname, '../data/historicalVolume.json');
+            if (fs.existsSync(hFile)) {
+                histData = JSON.parse(fs.readFileSync(hFile));
+            }
+        } catch(e) {}
+
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        
+        // FIJAR META ESTRICTAMENTE (Static Forecast) - El sistema no alterará la meta base aunque el volumen real sea mayor
+        const staticDailyVolume = baseTotal; 
+        const nightVolumeExpected = staticDailyVolume * 0.25; 
+
+        let todayHist = histData[todayStr] || null;
+
+        const hourlyData = [];
+        const baseCurve = [0.06, 0.08, 0.09, 0.09, 0.08, 0.07, 0.07, 0.07, 0.07, 0.07, 0.06, 0.06, 0.05, 0.04, 0.04];
+        const currentHour = dateInMexico.getHours();
+
+        for (let i = 0; i < 15; i++) {
+            const h = 9 + i;
+            let expectedForHour = Math.round(staticDailyVolume * baseCurve[i]);
+            let realCallsForHour = null;
+
+            if (todayHist && h <= currentHour) {
+                let walkBack = h - 1;
+                while(walkBack >= 1 && todayHist[walkBack.toString()] === undefined) walkBack--;
+                
+                let valPrev = 0;
+                if (walkBack >= 1 && todayHist[walkBack.toString()] !== undefined) {
+                    valPrev = todayHist[walkBack.toString()];
+                }
+
+                let valNow = todayHist[h.toString()];
+                
+                if (valNow !== undefined) {
+                    realCallsForHour = valNow - valPrev;
+                    if (realCallsForHour < 0) realCallsForHour = valNow; // Fallback if counter reset
+                }
+            }
+
+            hourlyData.push({
+                hour: `${h}:00 ${h < 12 ? 'am' : 'pm'}`,
+                expected: expectedForHour,
+                realCalls: realCallsForHour,
+                isNight: h >= 18
+            });
+        }
+
+        let ahtReferencia = 11.5; 
+        try {
+            const ConfigData = require('../models/Configuracion');
+            const conf = await ConfigData.findOne();
+            if (conf && conf.tmoMinutos) ahtReferencia = conf.tmoMinutos;
+        } catch(e) {}
+
+        const minutosRequeridos = nightVolumeExpected * ahtReferencia;
+        const ocupacionEsperada = 0.85; 
+        let agentesNecesariosTurno = Math.ceil((minutosRequeridos / 60) / 5 / ocupacionEsperada); 
+
+        if (isWeekend) agentesNecesariosTurno = Math.floor(agentesNecesariosTurno * 0.5);
+
+        const AgenteModel = require('../models/Agente');
+        const todos = await AgenteModel.findAll();
+        
+        let assignedNight = todos.filter(a => {
+            const h = a.horaEntradaProgramada || '09:00';
+            const hNum = parseInt(h.split(':')[0]);
+            return hNum >= 10; 
+        });
+
+        let deficit = agentesNecesariosTurno - assignedNight.length;
+        if(deficit < 0 && agentesNecesariosTurno < 0) deficit = 0;
+        
+        let suggestion = "Cobertura adecuada. No se requieren traslados de turnos.";
+        let state = 'verde';
+
+        if (isWeekend) {
+            suggestion = `✅ Operación de Fin de Semana. La regla de reacomodo estricto está apagada. Meta de hoy: ${baseTotal} llamadas.`;
+            state = 'verde';
+        } else {
+            if (deficit > 0) {
+                suggestion = `⚠️ Se espera alta demanda a partir de las 18:00 hrs. Faltan ${deficit} agentes. Recomendación: Mueve a ${deficit} agentes del turno 09:00 al turno Vespertino/Intermedio para evitar sobrecarga.`;
+                state = 'rojo';
+            } else if (deficit <= 0) {
+                suggestion = `💡 Capacidad Nocturna Satisfactoria (Sobran ${Math.abs(deficit)} agentes). La cobertura de 6 PM a 11 PM está asegurada.`;
+                state = 'verde';
+            }
+        }
+
+        res.json({
+            required: agentesNecesariosTurno,
+            actualScheduled: assignedNight.length,
+            deficit: deficit,
+            expectedCalls: Math.round(nightVolumeExpected),
+            suggestion: suggestion,
+            status: state,
+            isWeekend: isWeekend,
+            hourlyData: hourlyData,
+            dailyGoal: baseTotal,
+            averageExpectedPerHour: Math.round(baseTotal / 15)
+        });
+    } catch(err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -332,8 +483,10 @@ router.get('/reports/attendance', async (req, res) => {
         // Filtrar por turno para la visualización
         if (turno === 'matutino') {
             where.horaEntradaProgramada = '09:00';
+        } else if (turno === 'intermedio') {
+            where.horaEntradaProgramada = '10:00';
         } else if (turno === 'vespertino') {
-            where.horaEntradaProgramada = '12:00';
+            where.horaEntradaProgramada = '11:00';
         } else if (turno === 'ausentes') {
             where.estatusAsistencia = { [Op.in]: ['Ausente', 'Por Ingresar'] };
         }
@@ -370,8 +523,10 @@ router.get('/reports/attendance/export', async (req, res) => {
         // Filtrar por turno para el Excel
         if (turno === 'matutino') {
             where.horaEntradaProgramada = '09:00';
+        } else if (turno === 'intermedio') {
+            where.horaEntradaProgramada = '10:00';
         } else if (turno === 'vespertino') {
-            where.horaEntradaProgramada = '12:00';
+            where.horaEntradaProgramada = '11:00';
         } else if (turno === 'ausentes') {
             where.estatusAsistencia = { [Op.in]: ['Ausente', 'Por Ingresar'] };
         }
@@ -400,7 +555,7 @@ router.get('/reports/attendance/export', async (req, res) => {
         const ws = xlsx.utils.json_to_sheet(data);
         xlsx.utils.book_append_sheet(wb, ws, "Asistencia");
         const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
-        
+
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename=Reporte_Asistencia.xlsx`);
         res.send(buffer);
@@ -433,8 +588,10 @@ async function syncAttendanceFromCentral(targetDate, turno = 'todos') {
         // Filtrar agentes por turno seleccionado 
         if (turno === 'matutino') {
             allAgents = allAgents.filter(a => a.horaEntradaProgramada === '09:00');
+        } else if (turno === 'intermedio') {
+            allAgents = allAgents.filter(a => a.horaEntradaProgramada === '10:00');
         } else if (turno === 'vespertino') {
-            allAgents = allAgents.filter(a => a.horaEntradaProgramada === '12:00');
+            allAgents = allAgents.filter(a => a.horaEntradaProgramada === '11:00');
         }
         // 'ausentes' y '' procesan todos los agentes
         const normalize = (str) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -476,7 +633,7 @@ async function syncAttendanceFromCentral(targetDate, turno = 'todos') {
 
         for (const agent of allAgents) {
             let prodRow = productivityData.find(p => Number(p.numero_agente) === Number(agent.numero_agente));
-            
+
             if (!prodRow) {
                 const localTokens = normalize(agent.nombre).split(/\s+/).filter(t => t.length > 2);
                 let maxMatches = 0;
@@ -515,25 +672,25 @@ async function syncAttendanceFromCentral(targetDate, turno = 'todos') {
                 // Extraer el "HH:MM" del principio (ej: de '09:00 A 18:00' saca '09:00')
                 const cleanSchedule = rawSchedule.match(/\d{1,2}:\d{2}/)?.[0] || '09:00';
                 const [entH, entM] = cleanSchedule.split(':').map(n => parseInt(n) || 0);
-                
+
                 // Turno real = horasTurno + 1h (9h total)
                 const salidaHora = entH + horasTurno + 1;
                 const exitMinutes = salidaHora * 60 + entM;
 
                 const isToday = targetDate === todayStr;
-                
+
                 // PUNTO DE REFERENCIA INTELIGENTE (LIVE / SHIFT END)
                 let referenceTimestamp;
                 if (isToday && nowMinutes <= exitMinutes) {
                     referenceTimestamp = Date.now();
                 } else {
-                    const base = new Date(`${targetDate}T${String(salidaHora).padStart(2,'0')}:${String(entM).padStart(2,'0')}:00`);
+                    const base = new Date(`${targetDate}T${String(salidaHora).padStart(2, '0')}:${String(entM).padStart(2, '0')}:00`);
                     referenceTimestamp = base.getTime();
                 }
 
                 // Calcular entrada real restando tiempo logueado de la referencia
                 const loginDate = new Date(referenceTimestamp - totalSeconds * 1000);
-                
+
                 // --- MATEMÁTICA PURA (SIN TEXTO) PARA EVITAR NaN ---
                 let loginH = (loginDate instanceof Date && !isNaN(loginDate)) ? loginDate.getHours() : entH;
                 let loginM = (loginDate instanceof Date && !isNaN(loginDate)) ? loginDate.getMinutes() : entM;
@@ -545,15 +702,15 @@ async function syncAttendanceFromCentral(targetDate, turno = 'todos') {
                 if (loginTotalMin < scheduledTotalMin - 15) {
                     // SEGURO ANTI-NaN: Limpiar el ID para extraer solo números (ej: CCI14847 -> 14847)
                     const agentNumericId = parseInt(agent.numero_agente.toString().replace(/\D/g, '')) || 5;
-                    const pseudoRandomOffset = (agentNumericId % 11) + 2; 
-                    
+                    const pseudoRandomOffset = (agentNumericId % 11) + 2;
+
                     loginTotalMin = scheduledTotalMin - pseudoRandomOffset;
                     loginH = Math.floor(loginTotalMin / 60);
                     loginM = loginTotalMin % 60;
                 }
 
                 // Formatear hora real final (HH:MM)
-                officialLoginTime = `${String(loginH).padStart(2,'0')}:${String(loginM).padStart(2,'0')}`;
+                officialLoginTime = `${String(loginH).padStart(2, '0')}:${String(loginM).padStart(2, '0')}`;
 
                 if (loginTotalMin < scheduledTotalMin) {
                     delayMinutos = 0; // Llegó temprano
@@ -594,15 +751,19 @@ async function syncAttendanceFromCentral(targetDate, turno = 'todos') {
                 if (esPendiente || esAusenteRescatable) {
                     // Rescatar: el agente ya tiene datos en CyberHub → actualizar todo el registro
                     await existingEntry.update({
+                        horaEntradaProgramada: agent.horaEntradaProgramada,
                         horaEntradaReal: officialLoginTime,
                         minutosRetardo: delayMinutos,
                         impactoLlamadas: impacto,
                         estatusAsistencia: estatusAsistencia,
                         tiempoLogueado: loggedTimeStr || existingEntry.tiempoLogueado
                     });
-                } else if (loggedTimeStr) {
-                    // Ya tiene hora real congelada → solo actualizar tiempo logueado
-                    await existingEntry.update({ tiempoLogueado: loggedTimeStr });
+                } else {
+                    // Actualizar el turno programado por si cambió y actualizar tiempo logueado
+                    await existingEntry.update({
+                        horaEntradaProgramada: agent.horaEntradaProgramada,
+                        tiempoLogueado: loggedTimeStr || existingEntry.tiempoLogueado
+                    });
                 }
             } else if (!recordedNames.has(agent.nombre)) {
                 await Asistencia.create({

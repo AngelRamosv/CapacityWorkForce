@@ -3,10 +3,11 @@ import api from '../api/client';
 import { Clock, Filter, UserCheck, AlertCircle, Download, Trash2, Users, Moon } from 'lucide-react';
 
 const TURNO_OPTIONS = [
-    { value: 'matutino',  label: 'Matutino (9-6)',     minHour: 9,  minLabel: '09:00 AM' },
-    { value: 'vespertino',label: 'Vespertino (12-9)',  minHour: 12, minLabel: '12:00 PM' },
-    { value: 'ausentes',  label: 'Ausentes',            minHour: 9,  minLabel: '09:00 AM' },
-    { value: 'todos',     label: 'Todos los Turnos',   minHour: 18, minLabel: '06:00 PM' },
+    { value: 'matutino', label: 'Matutino (9-6)', minHour: 9, minLabel: '09:00 AM' },
+    { value: 'intermedio', label: 'Intermedio (10-7)', minHour: 10, minLabel: '10:00 AM' },
+    { value: 'vespertino', label: 'Vespertino (11-8)', minHour: 11, minLabel: '11:00 AM' },
+    { value: 'ausentes', label: 'Ausentes', minHour: 9, minLabel: '09:00 AM' },
+    { value: 'todos', label: 'Todos los Turnos', minHour: 18, minLabel: '06:00 PM' },
 ];
 
 const AttendanceReport: React.FC = () => {
@@ -35,7 +36,7 @@ const AttendanceReport: React.FC = () => {
     const canConsult = isPast || (isToday && nowMinutes >= turnoInfo.minHour * 60);
 
     useEffect(() => {
-        api.get('/pools').then(r => setPools(r.data)).catch(() => {});
+        api.get('/pools').then(r => setPools(r.data)).catch(() => { });
     }, []);
 
     const fetchReport = async () => {
@@ -150,10 +151,10 @@ const AttendanceReport: React.FC = () => {
                             onChange={e => { setTurno(e.target.value); setAttendance([]); }}
                         >
                             {TURNO_OPTIONS.map(opt => (
-                                    <option key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                    </option>
-                                ))}
+                                <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
