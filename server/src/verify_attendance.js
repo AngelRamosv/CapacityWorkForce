@@ -49,7 +49,7 @@ async function verify() {
                         loginDate.setHours(loginDate.getHours() - dH);
                         loginDate.setMinutes(loginDate.getMinutes() - dM);
                         
-                        const loginTimeStr = loginDate.toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit' });
+                        const loginTimeStr = loginDate.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour12: false, hour: '2-digit', minute: '2-digit' });
                         const [sH, sM] = agent.horaEntradaProgramada.split(':').map(Number);
                         const [nH, nM] = loginTimeStr.split(':').map(Number);
                         

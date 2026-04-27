@@ -135,7 +135,13 @@ router.post('/staff/sync', async (req, res) => {
                 ['nombre', 'agente', 'colaborador', 'staff', 'name'].some(n => key.toLowerCase().includes(n))
             ) || Object.keys(row)[0];
 
+            const supervisorColumn = Object.keys(row).find(key =>
+                ['supervisor', 'lider', 'coordinador', 'leader'].some(s => key.toLowerCase().includes(s))
+            );
+
             const agentName = row[nameColumn] ? row[nameColumn].toString().trim() : 'Agente Desconocido';
+            const supervisorName = supervisorColumn ? row[supervisorColumn].toString().trim() : 'Sin Asignar';
+            
             const normalizeStr = (s) => (s || '').toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
             const targetPool = poolsList.find(p => {
@@ -148,7 +154,8 @@ router.post('/staff/sync', async (req, res) => {
                 campanaId: targetPool ? targetPool.id : null,
                 horaEntradaProgramada: scheduledTime,
                 numero_agente: row['Nómina'] || row['Nomina'] || row['ID'] || row['numero_agente'],
-                turno: shiftName
+                turno: shiftName,
+                supervisor: supervisorName
             });
 
             if (isMovil) {
@@ -206,7 +213,8 @@ router.get('/live', async (req, res) => {
         try {
             response = await axios.get('http://192.168.48.183:8050/data', { timeout: 10000 });
         } catch (centralError) {
-            return res.status(503).json({ error: 'Central Offline' });
+            // Mock base si la central falla
+            response = { data: { llamadas_ingresadas: 0, abandonadas_total: 0, porcentaje_abandono: 0, media_total: '0' } };
         }
 
         const realData = response.data;
@@ -214,13 +222,10 @@ router.get('/live', async (req, res) => {
         const offsetCalls = config?.ajusteLlamadas || 0;
         const offsetAbandoned = config?.ajusteAbandonadas || 0;
 
-        // Auto-sincronizar Asistencia cada 2 minutos en segundo plano
         const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Mexico_City' });
         const now = Date.now();
-        if (now - lastSyncTimestamp > 120000) { // 2 minutos
+        if (now - lastSyncTimestamp > 120000) { 
             lastSyncTimestamp = now;
-            // No usamos await aquí para no retrasar la respuesta del dashboard, 
-            // pero refrescamos la bolsa de retardos en el fondo.
             syncAttendanceFromCentral(today, 'todos').catch(err => console.error('Auto-Sync Error:', err.message));
         }
 
@@ -231,48 +236,139 @@ router.get('/live', async (req, res) => {
             realData.abandonadas_total = Math.max(0, realData.abandonadas_total - offsetAbandoned);
         }
 
-        // --- CORRECCIÓN DE LLAVES DE TIEMPO ---
-        // Si la central manda 'valores' pero no 'tiempos_en_estado', los mapeamos redondeando a entero.
-        if (realData.valores && !realData.tiempos_en_estado) {
-            realData.tiempos_en_estado = realData.valores.map(v => `${Math.round(v)}m`);
+        // --- CONTADOR INTELIGENTE (CYBERHUB) - COMENTADO ---
+        /*
+        const nowMx = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+        const currentHour = nowMx.getHours();
+        let allAttendance = [];
+        
+        if (currentHour >= 8) {
+            const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${nowMx.getMinutes().toString().padStart(2, '0')}`;
+            allAttendance = await Asistencia.findAll({ 
+                where: { 
+                    fecha: today,
+                    estatusAsistencia: { [Op.in]: ['A Tiempo', 'Retardo'] },
+                    horaEntradaReal: { 
+                        [Op.and]: [
+                            { [Op.ne]: null }, 
+                            { [Op.ne]: '' },
+                            { [Op.lte]: currentTimeStr },
+                            { [Op.gte]: '06:00' }
+                        ] 
+                    }
+                } 
+            });
         }
 
-        const todayAttendance = await Asistencia.findAll({
-            where: {
-                fecha: today,
-                estatusAsistencia: { [Op.in]: ['Retardo', 'Ausente'] }
-            }
+        const agents = await Agente.findAll();
+        const agentsMap = new Map(agents.map(a => [a.nombre, a.supervisor]));
+
+        realData.total_agentes = allAttendance.length;
+        realData.nombres = allAttendance.map(a => a.nombreAgente);
+        realData.supervisores = allAttendance.map(a => agentsMap.get(a.nombreAgente) || 'Sin Asignar');
+        realData.auxiliares_actuales = allAttendance.map(a => 'Disponible');
+        
+        const nowTime = new Date();
+        realData.tiempos_en_estado = allAttendance.map(a => {
+            const loginTime = a.horaEntradaReal;
+            if (!loginTime) return '0m';
+            try {
+                const [h, m] = loginTime.split(':');
+                const loginDate = new Date();
+                loginDate.setHours(parseInt(h), parseInt(m), 0);
+                const diffMs = nowTime.getTime() - loginDate.getTime();
+                return `${Math.max(0, Math.floor(diffMs / 60000))}m`;
+            } catch (e) { return '0m'; }
         });
 
-        const retardos = todayAttendance.filter(a => a.estatusAsistencia === 'Retardo');
-
+        const retardos = allAttendance.filter(a => a.estatusAsistencia === 'Retardo');
+        
         realData.puntualidad = {
-            totalLoginDelay: retardos.reduce((sum, a) => sum + a.minutosRetardo, 0),
+            totalLoginDelay: retardos.reduce((sum, a) => sum + (a.minutosRetardo || 0), 0),
             tardyEntrants: retardos.map(a => ({ name: a.nombreAgente, delay: a.minutosRetardo }))
         };
 
-        // --- SISTEMA INTELIGENTE DE TRACKING ---
+        if (allAttendance.length === 0) {
+            realData.llamadas_ingresadas = 0;
+            realData.abandonadas_total = 0;
+            realData.porcentaje_abandono = 0;
+            realData.media_total = 0;
+            realData.nombres = [];
+            realData.supervisores = [];
+            realData.auxiliares_actuales = [];
+            realData.tiempos_en_estado = [];
+            realData.puntualidad = { totalLoginDelay: 0, tardyEntrants: [] };
+        }
+        */
+        // ---------------------------------------------------
+
+        // --- MAPEO DE SUPERVISORES PARA CENTRAL ---
+        const agents = await Agente.findAll();
+        const agentsMapById = new Map();
+        const agentsMapByName = new Map();
+        
+        agents.forEach(a => {
+            if (a.numero_agente) agentsMapById.set(a.numero_agente.toString(), a.supervisor);
+            // Mapeo por nombre (normalizado) como respaldo
+            const norm = (a.nombre || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            agentsMapByName.set(norm, a.supervisor);
+        });
+
+        if (realData.nombres && realData.nombres.length > 0) {
+            // Obtener TODA la asistencia de hoy para retardos (independiente de la central)
+            const nowMx = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+            const currentTimeStr = `${nowMx.getHours().toString().padStart(2, '0')}:${nowMx.getMinutes().toString().padStart(2, '0')}`;
+            
+            const todayAttendance = await Asistencia.findAll({ 
+                where: { 
+                    fecha: today,
+                    horaEntradaReal: { 
+                        [Op.and]: [
+                            { [Op.lte]: currentTimeStr },
+                            { [Op.gte]: '06:00' }
+                        ] 
+                    }
+                } 
+            });
+            
+            // Calcular retardos globales de la base de datos
+            const allRetardos = todayAttendance.filter(a => a.minutosRetardo > 0);
+            realData.puntualidad = {
+                totalLoginDelay: allRetardos.reduce((sum, a) => sum + (a.minutosRetardo || 0), 0),
+                tardyEntrants: allRetardos.map(a => ({ name: a.nombreAgente, delay: a.minutosRetardo }))
+            };
+
+            // Mapeo de supervisores para la lista de la central
+            realData.supervisores = realData.nombres.map(centralName => {
+                const parts = centralName.split(' - ');
+                const id = parts[0].trim();
+                const shortNamePart = (parts[1] || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                
+                if (agentsMapById.has(id)) return agentsMapById.get(id);
+
+                for (let [fullName, sup] of agentsMapByName) {
+                    if (fullName.includes(shortNamePart)) return sup;
+                }
+                return 'Sin Asignar';
+            });
+        }
+        // ------------------------------------------
+
         const fs = require('fs');
         const path = require('path');
         const hFile = path.join(__dirname, '../data/historicalVolume.json');
-
         let histData = {};
         try { if (fs.existsSync(hFile)) histData = JSON.parse(fs.readFileSync(hFile)); } catch (e) { }
-
         const cHour = new Date().getHours().toString();
-        const dateStr = today;
-
-        if (!histData[dateStr]) histData[dateStr] = {};
-
+        if (!histData[today]) histData[today] = {};
         const currentIn = parseFloat(realData.llamadas_ingresadas || 0);
-        if (currentIn > 0 && (!histData[dateStr][cHour] || currentIn > histData[dateStr][cHour])) {
-            histData[dateStr][cHour] = currentIn;
+        if (currentIn > 0 && (!histData[today][cHour] || currentIn > histData[today][cHour])) {
+            histData[today][cHour] = currentIn;
             try {
                 if (!fs.existsSync(path.join(__dirname, '../data'))) fs.mkdirSync(path.join(__dirname, '../data'));
                 fs.writeFileSync(hFile, JSON.stringify(histData));
-            } catch (e) { console.error('Error guardando histórico:', e); }
+            } catch (e) { }
         }
-        // ---------------------------------------
 
         res.json(realData);
     } catch (error) {
@@ -304,10 +400,35 @@ router.get('/live/coverage', async (req, res) => {
         const dateInMexico = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
         const dayOfWeek = dateInMexico.getDay(); 
         const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Mexico_City' });
+        
+        // Obtener la semana actual para buscar el plan
+        const currentYear = dateInMexico.getFullYear();
+        const getWeekNumber = (d) => {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+            var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+            return weekNo;
+        };
+        const currentWeek = getWeekNumber(dateInMexico);
+
+        // Buscar el plan más reciente para esta semana
+        const latestPlan = await PlanSemanal.findOne({
+            where: { numeroSemana: currentWeek, anio: currentYear },
+            order: [['createdAt', 'DESC']]
+        });
+
+        const dayNames = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+        const todayName = dayNames[dayOfWeek];
 
         let baseTotal = 3195;
         if (dayOfWeek === 6) baseTotal = 1500;
         else if (dayOfWeek === 0) baseTotal = 780;
+
+        // Si existe un plan guardado, usar la meta planeada para hoy
+        if (latestPlan && latestPlan.distribucion && latestPlan.distribucion[todayName]) {
+            baseTotal = latestPlan.distribucion[todayName].planned || baseTotal;
+        }
 
         let histData = {};
         try {
@@ -319,7 +440,7 @@ router.get('/live/coverage', async (req, res) => {
 
         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
         
-        // FIJAR META ESTRICTAMENTE (Static Forecast) - El sistema no alterará la meta base aunque el volumen real sea mayor
+        // FIJAR META ESTRICTAMENTE (Static Forecast)
         const staticDailyVolume = baseTotal; 
         const nightVolumeExpected = staticDailyVolume * 0.25; 
 
@@ -400,6 +521,28 @@ router.get('/live/coverage', async (req, res) => {
             }
         }
 
+        // Generar requerimientos detallados por hora para las barras de reacomodo (SOLO 6 PM EN ADELANTE)
+        const nightHourlyRequirements = hourlyData.filter(item => {
+            const hNum = parseInt(item.hour.split(':')[0]);
+            // Si es PM y >= 6 (pero manejamos formato 24h en hNum)
+            return hNum >= 18;
+        }).map(item => {
+            const hNum = parseInt(item.hour.split(':')[0]);
+            // Cálculo simple de requerimiento basado en la curva y TMO
+            const reqAgts = Math.ceil((item.expected * ahtReferencia / 60) / 1 / ocupacionEsperada);
+            const schAgts = todos.filter(a => {
+                const entryH = parseInt((a.horaEntradaProgramada || '09:00').split(':')[0]);
+                const exitH = entryH + 9;
+                return hNum >= entryH && hNum < exitH;
+            }).length;
+
+            return {
+                ...item,
+                requiredAgents: reqAgts,
+                scheduledAgents: schAgts
+            };
+        });
+
         res.json({
             required: agentesNecesariosTurno,
             actualScheduled: assignedNight.length,
@@ -409,6 +552,7 @@ router.get('/live/coverage', async (req, res) => {
             status: state,
             isWeekend: isWeekend,
             hourlyData: hourlyData,
+            nightHourlyRequirements: nightHourlyRequirements,
             dailyGoal: baseTotal,
             averageExpectedPerHour: Math.round(baseTotal / 15)
         });
@@ -442,15 +586,14 @@ router.post('/plans', async (req, res) => {
         const effectiveTotalAgents = (pool.totalAgentes || 0) - (pool.agentesNocturnos || 0);
         const balance = WfmService.calculateZeroSumBalance(effectiveTotalAgents, distribution);
 
-        let plan = await PlanSemanal.findOne({
-            where: { campanaId: poolId, numeroSemana: weekNumber, anio: year }
+        // Siempre crear un nuevo plan para mantener el histórico de versiones
+        const plan = await PlanSemanal.create({ 
+            campanaId: poolId, 
+            numeroSemana: weekNumber, 
+            anio: year, 
+            distribucion: distribution 
         });
-
-        if (plan) {
-            await plan.update({ distribucion: distribution });
-        } else {
-            plan = await PlanSemanal.create({ campanaId: poolId, numeroSemana: weekNumber, anio: year, distribucion: distribution });
-        }
+        
         res.json({ plan, balance });
     } catch (error) {
         res.status(500).json({ error: error.message });

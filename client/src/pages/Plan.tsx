@@ -83,8 +83,8 @@ const Plan: React.FC = () => {
                                             <Calendar size={24} />
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-black text-gray-900 italic">SEMANA {plan.numeroSemana}</h3>
-                                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{plan.anio}</p>
+                                            <h3 className="text-lg font-black text-gray-900 italic">PLAN: {new Date(plan.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Mexico_City' })}</h3>
+                                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Cargado a las {new Date(plan.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' })}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter">
@@ -94,25 +94,34 @@ const Plan: React.FC = () => {
                                 </div>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
-                                    {Object.entries(plan.distribucion).map(([day, data]: [string, any]) => (
-                                        <div key={day} className="relative p-4 bg-gray-50 rounded-2xl border border-transparent group-hover:border-indigo-100 transition-colors">
-                                            <p className="text-[10px] text-gray-400 uppercase font-bold mb-1 opacity-70">{day.substring(0, 3)}</p>
-                                            <div className="flex flex-col items-baseline gap-1">
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className="text-xl font-black text-gray-800">{data.planned}</span>
-                                                    <span className="text-[8px] font-black text-indigo-400 uppercase">Pax</span>
-                                                </div>
-                                                {data.matutino !== undefined && (
-                                                    <div className="text-[9px] text-gray-500 font-medium">
-                                                        <span className="text-blue-500">{data.matutino}</span> / <span className="text-orange-500">{data.vespertino}</span> / <span className="text-purple-500">{data.nocturno}</span>
+                                    {(() => {
+                                        const order = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+                                        return Object.entries(plan.distribucion)
+                                            .sort((a, b) => {
+                                                const dayA = a[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                                                const dayB = b[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                                                return order.indexOf(dayA) - order.indexOf(dayB);
+                                            })
+                                            .map(([day, data]: [string, any]) => (
+                                                <div key={day} className="relative p-4 bg-gray-50 rounded-2xl border border-transparent group-hover:border-indigo-100 transition-colors">
+                                                    <p className="text-[10px] text-gray-400 uppercase font-bold mb-1 opacity-70">{day.substring(0, 3)}</p>
+                                                    <div className="flex flex-col items-baseline gap-1">
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className="text-xl font-black text-gray-800">{data.planned}</span>
+                                                            <span className="text-[8px] font-black text-indigo-400 uppercase">Pax</span>
+                                                        </div>
+                                                        {data.matutino !== undefined && (
+                                                            <div className="text-[9px] text-gray-500 font-medium">
+                                                                <span className="text-blue-500">{data.matutino}</span> / <span className="text-orange-500">{data.vespertino}</span> / <span className="text-purple-500">{data.nocturno}</span>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                            <div className="mt-2 text-[8px] font-bold text-gray-500 bg-white inline-block px-1.5 py-0.5 rounded-lg border border-gray-100 shadow-sm leading-tight">
-                                                {data.shift ? `TURNO ${data.shift}` : `${data.rest} Libres`}
-                                            </div>
-                                        </div>
-                                    ))}
+                                                    <div className="mt-2 text-[8px] font-bold text-gray-500 bg-white inline-block px-1.5 py-0.5 rounded-lg border border-gray-100 shadow-sm leading-tight">
+                                                        {data.shift ? `TURNO ${data.shift}` : `${data.rest} Libres`}
+                                                    </div>
+                                                </div>
+                                            ));
+                                    })()}
                                 </div>
                             </div>
                             <div className="bg-gray-50/50 px-6 py-3 border-t border-gray-50 flex justify-between items-center">

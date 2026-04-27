@@ -24,6 +24,10 @@ const Agente = sequelize.define('Agente', {
     turno: {
         type: DataTypes.STRING, // "Matutino", "Vespertino", "Nocturno"
         allowNull: true
+    },
+    supervisor: {
+        type: DataTypes.STRING,
+        allowNull: true
     }
 }, {
     tableName: 'agentes',

@@ -446,16 +446,9 @@ const LiveDashboard: React.FC = () => {
             {/* MONITOR DE COBERTURA INTRADIA */}
             {coverageInfo && (
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mt-8">
-                    <div className="flex items-center justify-between gap-3 mb-6 border-b border-gray-50 pb-4">
-                        <div className="flex items-center gap-3">
-                            <Activity className="text-indigo-500" size={24} />
-                            <div>
-                                <h3 className="text-lg font-black text-gray-800">Tendencia de Volumen (Histograma Operativo)</h3>
-                                <p className="text-xs text-gray-500">
-                                    {coverageInfo.isWeekend ? 'Operación fin de semana. Acumulados y seguimiento de meta base.' : 'Compara el avance de volumen real vs esperado para determinar traslados de personal.'}
-                                </p>
-                            </div>
-                        </div>
+                    <div className="flex items-center gap-3 mb-6">
+                        <Activity className="text-indigo-500" size={24} />
+                        <h3 className="text-lg font-black text-gray-800 uppercase tracking-tighter">VOLUMEN DE LLAMADAS</h3>
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-8 mb-6">
@@ -468,6 +461,18 @@ const LiveDashboard: React.FC = () => {
                             <div className="pt-4 border-t border-gray-200/60">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Meta Fija Esperada del Día</p>
                                 <p className="text-2xl font-black text-gray-700">{coverageInfo.dailyGoal || 0} <span className="text-xs font-medium text-gray-400">llamadas</span></p>
+                                
+                                {/* Evaluación de Meta Estética (Solo después de las 9 PM) */}
+                                {coverageInfo && new Date().getHours() >= 21 && (
+                                    <div className={`mt-3 p-3 rounded-xl border-2 text-center animate-in zoom-in duration-500 ${(data.abandonadas_total / data.llamadas_ingresadas) * 100 <= 10 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                                        <p className={`text-[10px] font-black uppercase tracking-widest ${(data.abandonadas_total / data.llamadas_ingresadas) * 100 <= 10 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            {(data.abandonadas_total / data.llamadas_ingresadas) * 100 <= 10 ? '🎉 META CUMPLIDA' : 'META NO ALCANZADA'}
+                                        </p>
+                                        <p className="text-[9px] text-gray-500 font-bold mt-1">
+                                            Abandono: {data.llamadas_ingresadas > 0 ? Math.round((data.abandonadas_total / data.llamadas_ingresadas) * 100) : 0}%
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -481,13 +486,7 @@ const LiveDashboard: React.FC = () => {
                                 <div className="border-b border-gray-100 w-full h-0"></div>
                             </div>
 
-                            {/* Línea Expected Promedio */}
-                            <div
-                                className="absolute left-0 right-0 border-b-2 border-dashed border-indigo-200 z-0 pointer-events-none"
-                                style={{ bottom: '35%' }}
-                            >
-                                <span className="absolute -top-5 right-0 text-[9px] font-bold text-indigo-400 bg-white px-2">Nivel Esperado: {coverageInfo.averageExpectedPerHour || 0}/h</span>
-                            </div>
+
 
                             {/* Barras Horarias (Real vs Esperado) */}
                             {coverageInfo.hourlyData?.map((item: any, i: number) => {
@@ -497,7 +496,7 @@ const LiveDashboard: React.FC = () => {
                                 const heightPct = maxCalls > 0 ? (baseVal / maxCalls) * 100 : 0;
 
                                 let barColor = 'bg-gray-200 group-hover:bg-gray-300'; // Horas futuras (Pronóstico)
-                                if (item.realCalls !== null) {
+                                if (item.realCalls !== null && item.expected !== null) {
                                     barColor = item.realCalls >= item.expected ? 'bg-emerald-400 group-hover:bg-emerald-500' : 'bg-amber-400 group-hover:bg-amber-500';
                                 }
 
@@ -511,7 +510,7 @@ const LiveDashboard: React.FC = () => {
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-300">Reales:</span>
-                                                <span className={item.realCalls >= item.expected ? 'text-emerald-400' : 'text-amber-400'}>{item.realCalls !== null ? item.realCalls : '--'}</span>
+                                                <span className={(item.expected === null) ? 'text-gray-400' : (item.realCalls >= item.expected ? 'text-emerald-400' : 'text-amber-400')}>{item.realCalls !== null ? item.realCalls : '--'}</span>
                                             </div>
                                         </div>
                                         <div
@@ -530,23 +529,74 @@ const LiveDashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="mt-2">
-                        {/* Estado y Sugerencia Operativa Discreta */}
-                        <div className={`p-5 rounded-2xl border ${coverageInfo.status === 'rojo' ? 'bg-rose-50 border-rose-200 shadow-[0_0_15px_-3px_rgba(251,113,133,0.3)]' : 'bg-transparent border-gray-100'
-                            }`}>
-                            <div className="flex items-start gap-4">
-                                <div className="mt-1">
-                                    <AlertTriangle size={24} className={coverageInfo.status === 'rojo' ? 'text-rose-600 animate-pulse' : 'text-gray-400'} />
+                    <div className="mt-8 relative">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Activity className="text-rose-500" size={20} />
+                            <h4 className="font-black text-gray-800 uppercase tracking-wider text-sm">REACOMODO DE AGENTES</h4>
+                            {coverageInfo.isWeekend && <span className="text-[10px] bg-gray-200 text-gray-500 font-bold px-2 py-0.5 rounded uppercase ml-2">No Disponible en Fines de Semana</span>}
+                        </div>
+                        <div className={`bg-white p-5 rounded-2xl border border-gray-200 shadow-sm ${coverageInfo.isWeekend ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+                            {coverageInfo.nightHourlyRequirements && coverageInfo.nightHourlyRequirements.length > 0 ? (
+                                <div className="space-y-4">
+                                    {coverageInfo.nightHourlyRequirements.map((req: any, i: number) => {
+                                        const expected = req.expected || 1;
+                                        const real = req.realCalls !== null ? req.realCalls : 0;
+                                        const pct = Math.min(100, Math.max(0, (real / expected) * 100));
+                                        
+                                        const currentHour = new Date().getHours();
+                                        const reqHour = parseInt(req.hour.split(':')[0]);
+                                        const isFuture = currentHour < reqHour;
+                                        const isCurrent = currentHour === reqHour;
+                                        
+                                        // REGLA: Mostrar "?" si es hora futura o fin de semana en descanso
+                                        const showQuestionMark = isFuture || (coverageInfo.isWeekend && reqHour >= 18);
+                                        const assignedAgents = showQuestionMark ? null : (isCurrent ? (data?.total_agentes || 0) : req.scheduledAgents);
+                                        const currentDeficit = Math.max(0, req.requiredAgents - (assignedAgents || 0));
+                                        const isOk = currentDeficit <= 0;
+                                        
+                                        const forceEnEspera = showQuestionMark;
+
+                                        return (
+                                            <div key={i} className="flex flex-col md:flex-row md:items-center gap-4 bg-gray-50/50 p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+                                                <div className="w-16">
+                                                    <span className="font-black text-gray-700">{req.hour}</span>
+                                                </div>
+                                                
+                                                <div className="flex-1">
+                                                    <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1.5 overflow-hidden flex">
+                                                        <div className={`h-full rounded-full transition-all duration-1000 ${real >= expected ? 'bg-emerald-400' : 'bg-indigo-400'}`} style={{ width: `${pct}%` }}></div>
+                                                    </div>
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex justify-between">
+                                                        <span>Reales: <span className="text-gray-600">{req.realCalls !== null ? req.realCalls : '--'}</span> / Meta: {req.expected || '--'}</span>
+                                                        <span className="text-gray-400">Req: {req.requiredAgents} agts | Asignados: {assignedAgents !== null ? assignedAgents : '?'} agts</span>
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="w-full md:w-auto md:min-w-[160px] flex justify-end">
+                                                    {forceEnEspera ? (
+                                                        <span className="bg-gray-100 border border-gray-200 text-gray-500 text-[11px] font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 whitespace-nowrap w-full md:w-auto justify-center shadow-sm">
+                                                            <Clock size={14} className="text-gray-400" />
+                                                            En Espera
+                                                        </span>
+                                                    ) : isOk ? (
+                                                        <span className="bg-emerald-50 border border-emerald-200 text-emerald-600 text-[11px] font-black px-4 py-2 rounded-lg flex items-center gap-1.5 whitespace-nowrap shadow-sm w-full md:w-auto justify-center">
+                                                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                                            Cobertura Ok
+                                                        </span>
+                                                    ) : (
+                                                        <span className="bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-black px-4 py-2 rounded-lg flex items-center gap-1.5 whitespace-nowrap shadow-sm w-full md:w-auto justify-center">
+                                                            <AlertTriangle size={14} className="text-rose-500 animate-pulse" />
+                                                            Mover {currentDeficit} agentes
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                <div>
-                                    <p className={`font-black text-sm uppercase tracking-wider mb-1 ${coverageInfo.status === 'rojo' ? 'text-rose-800' : 'text-gray-500'}`}>
-                                        {coverageInfo.status === 'rojo' ? '¡ACCION REQUERIDA (18:00+)!' : 'Cobertura Operativa Controlada'}
-                                    </p>
-                                    <p className={`text-sm font-bold leading-relaxed ${coverageInfo.status === 'rojo' ? 'text-rose-700' : 'text-gray-400'}`}>
-                                        {coverageInfo.suggestion}
-                                    </p>
-                                </div>
-                            </div>
+                            ) : (
+                                <p className="text-sm text-gray-400 font-bold italic p-4 text-center">Datos de reacomodo no disponibles.</p>
+                            )}
                         </div>
                     </div>
                 </div>

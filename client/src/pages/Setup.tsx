@@ -66,7 +66,7 @@ const Setup: React.FC = () => {
                     fileBase64: base64,
                     fileName: file.name
                 });
-                alert(`Staff sincronizado con éxito desde ${res.data.fileName}.\nRetención: ${res.data.retencionCount}\nMóvil: ${res.data.movilCount}`);
+                alert(`Staff sincronizado con éxito.\nRetención: ${res.data.retencionCount}\nMóvil: ${res.data.movilCount}`);
                 fetchData();
             } catch (error: any) {
                 alert(error.response?.data?.error || 'Error al procesar el archivo');
