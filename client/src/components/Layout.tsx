@@ -8,20 +8,20 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const isActive = (path: string) => location.pathname === path;
 
     const baseClass = "flex items-center px-3 py-2 rounded-xl transition-all font-medium text-sm ";
-    const normalClass = baseClass + "text-gray-500 hover:bg-gray-100 hover:text-indigo-600";
-    const activeClass = baseClass + "bg-indigo-50 text-indigo-700 font-bold shadow-sm ring-1 ring-indigo-100";
+    const normalClass = baseClass + "text-slate-400 hover:bg-slate-800 hover:text-white";
+    const activeClass = baseClass + "bg-indigo-900/40 text-indigo-300 font-bold shadow-sm ring-1 ring-indigo-500/30";
 
     // Live es especial con su diseño
-    const liveNormalClass = baseClass + "text-rose-600 hover:bg-rose-50";
-    const liveActiveClass = baseClass + "bg-rose-100 text-rose-700 font-bold shadow-sm ring-1 ring-rose-200";
+    const liveNormalClass = baseClass + "text-rose-500 hover:bg-slate-800 hover:text-rose-400";
+    const liveActiveClass = baseClass + "bg-rose-900/30 text-rose-400 font-bold shadow-sm ring-1 ring-rose-500/30";
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-[999]">
+        <div className="min-h-screen bg-[#0e1117] flex flex-col text-slate-300">
+            <header className="bg-[#161a22] shadow-sm border-b border-slate-800 sticky top-0 z-[999]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
                         <div className="flex items-center gap-2">
-                            <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-indigo-400 tracking-tight">Capacity WFM</span>
+                            <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 tracking-tight">Capacity WFM</span>
                         </div>
                         <nav className="flex space-x-2">
                             <Link to="/plan" className={isActive('/plan') ? activeClass : normalClass}>
@@ -63,8 +63,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
                 {children}
             </main>
-            <footer className="bg-white border-t border-gray-200 py-4">
-                <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
+            <footer className="bg-[#161a22] border-t border-slate-800 py-4">
+                <div className="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
                     &copy; 2026 Capacity WFM - Internal Tool
                 </div>
             </footer>

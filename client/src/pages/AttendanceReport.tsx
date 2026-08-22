@@ -19,6 +19,7 @@ const AttendanceReport: React.FC = () => {
     );
     const [poolId, setPoolId] = useState('');
     const [turno, setTurno] = useState('matutino');
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Hora actual en México
     const nowMex = useMemo(() => {
@@ -83,22 +84,22 @@ const AttendanceReport: React.FC = () => {
 
     const statusBadge = (row: any) => {
         if (row.estatusAsistencia === 'Ausente') return (
-            <div className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ring-1 ring-inset ring-gray-300">
+            <div className="inline-flex items-center gap-1.5 bg-slate-800 text-slate-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ring-1 ring-inset ring-gray-300">
                 Ausente
             </div>
         );
         if (row.estatusAsistencia === 'Por Ingresar') return (
-            <div className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ring-1 ring-inset ring-amber-200">
+            <div className="inline-flex items-center gap-1.5 bg-amber-900/20 text-amber-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ring-1 ring-inset ring-amber-200">
                 <Moon size={10} /> Por Ingresar
             </div>
         );
         if (row.estatusAsistencia === 'Retardo') return (
-            <div className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ring-1 ring-inset ring-rose-200">
+            <div className="inline-flex items-center gap-1.5 bg-rose-900/20 text-rose-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ring-1 ring-inset ring-rose-200">
                 <AlertCircle size={10} /> Retardo
             </div>
         );
         return (
-            <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ring-1 ring-inset ring-emerald-200">
+            <div className="inline-flex items-center gap-1.5 bg-emerald-900/20 text-emerald-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ring-1 ring-inset ring-emerald-200">
                 <UserCheck size={10} /> A Tiempo
             </div>
         );
@@ -107,21 +108,21 @@ const AttendanceReport: React.FC = () => {
     return (
         <div className="space-y-6 animate-in fade-in duration-700">
             {/* Header */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="bg-[#161a22] p-6 rounded-3xl shadow-sm border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                    <h1 className="text-2xl font-black text-slate-50 flex items-center gap-3">
                         <Clock className="text-amber-500" />
                         Reporte de Asistencia y Retardos
                     </h1>
-                    <p className="text-gray-500 text-sm mt-1">Histórico detallado de puntualidad de agentes.</p>
+                    <p className="text-slate-400 text-sm mt-1">Histórico detallado de puntualidad de agentes.</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
                     {/* Un solo calendario */}
-                    <div className="flex items-center gap-1 bg-gray-50 p-2 rounded-xl border border-gray-200">
-                        <Filter size={16} className="text-gray-400 mr-1" />
-                        <div className="relative cursor-pointer flex items-center h-8 px-2 hover:bg-white rounded-lg transition-colors">
-                            <span className="text-sm font-black text-gray-800 pointer-events-none">
+                    <div className="flex items-center gap-1 bg-[#0e1117] p-2 rounded-xl border border-slate-700">
+                        <Filter size={16} className="text-slate-500 mr-1" />
+                        <div className="relative cursor-pointer flex items-center h-8 px-2 hover:bg-[#161a22] rounded-lg transition-colors">
+                            <span className="text-sm font-black text-slate-100 pointer-events-none">
                                 {formatDate(date)}
                             </span>
                             <input
@@ -135,7 +136,7 @@ const AttendanceReport: React.FC = () => {
 
                     {/* Dropdown Campaña */}
                     <select
-                        className="bg-gray-50 border border-gray-200 rounded-xl p-2 text-xs font-bold focus:ring-indigo-500 transition"
+                        className="bg-[#0e1117] border border-slate-700 rounded-xl p-2 text-xs font-bold focus:ring-indigo-500 transition"
                         value={poolId}
                         onChange={e => setPoolId(e.target.value)}
                     >
@@ -146,7 +147,7 @@ const AttendanceReport: React.FC = () => {
                     {/* Dropdown Turno con indicador de disponibilidad */}
                     <div className="relative">
                         <select
-                            className="bg-gray-50 border border-gray-200 rounded-xl p-2 text-xs font-bold focus:ring-indigo-500 transition pr-8"
+                            className="bg-[#0e1117] border border-slate-700 rounded-xl p-2 text-xs font-bold focus:ring-indigo-500 transition pr-8"
                             value={turno}
                             onChange={e => { setTurno(e.target.value); setAttendance([]); }}
                         >
@@ -158,13 +159,29 @@ const AttendanceReport: React.FC = () => {
                         </select>
                     </div>
 
+                    {/* Buscador de Agente */}
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Buscar agente..."
+                            className="bg-[#0e1117] border border-slate-700 rounded-xl py-2 pl-9 pr-4 text-xs font-bold focus:ring-indigo-500 focus:outline-none focus:border-indigo-500 transition w-48"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
                     {/* Botones */}
                     <div className="flex gap-2">
                         <div className="relative group">
                             <button
                                 onClick={fetchReport}
                                 disabled={!canConsult}
-                                className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                                className="bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 <Users size={14} />
                                 Consultar
@@ -188,7 +205,7 @@ const AttendanceReport: React.FC = () => {
                         <button
                             onClick={handleClearPeriod}
                             disabled={attendance.length === 0}
-                            className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl text-xs font-bold hover:bg-rose-50 hover:text-rose-600 transition active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                            className="bg-slate-800 text-slate-500 px-4 py-2 rounded-xl text-xs font-bold hover:bg-rose-900/20 hover:text-rose-400 transition active:scale-95 disabled:opacity-50 flex items-center gap-2"
                             title="Limpiar periodo seleccionado"
                         >
                             <Trash2 size={14} />
@@ -198,10 +215,10 @@ const AttendanceReport: React.FC = () => {
             </div>
 
             {/* Tabla */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-[#161a22] rounded-3xl shadow-sm border border-slate-800 overflow-hidden">
                 <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr className="bg-gray-50/50 border-b border-gray-100 text-[10px] font-black uppercase text-gray-400 tracking-wider">
+                        <tr className="bg-slate-800/30 border-b border-slate-800 text-[10px] font-black uppercase text-slate-500 tracking-wider">
                             <th className="px-6 py-4 text-center">Fecha</th>
                             <th className="px-6 py-4">Agente</th>
                             <th className="px-6 py-4 text-center">H. Programada</th>
@@ -212,37 +229,41 @@ const AttendanceReport: React.FC = () => {
                             <th className="px-6 py-4 text-right">Acción</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-slate-800/50">
                         {loading ? (
-                            <tr><td colSpan={8} className="px-6 py-20 text-center animate-pulse text-gray-400 font-medium">Cargando reporte...</td></tr>
+                            <tr><td colSpan={8} className="px-6 py-20 text-center animate-pulse text-slate-500 font-medium">Cargando reporte...</td></tr>
                         ) : attendance.length === 0 ? (
-                            <tr><td colSpan={8} className="px-6 py-20 text-center text-gray-400 italic">No se encontraron registros para este periodo.</td></tr>
-                        ) : (
-                            attendance.map((row) => (
-                                <tr key={row.id} className="hover:bg-gray-50/30 transition-colors group">
-                                    <td className="px-6 py-4 text-center text-xs font-mono font-bold text-gray-500">
+                            <tr><td colSpan={8} className="px-6 py-20 text-center text-slate-500 italic">No se encontraron registros para este periodo.</td></tr>
+                        ) : (() => {
+                            const filteredAttendance = attendance.filter(a => a.nombreAgente.toLowerCase().includes(searchTerm.toLowerCase()));
+                            if (filteredAttendance.length === 0) {
+                                return <tr><td colSpan={8} className="px-6 py-20 text-center text-slate-500 italic">No se encontraron agentes que coincidan con "{searchTerm}".</td></tr>;
+                            }
+                            return filteredAttendance.map((row) => (
+                                <tr key={row.id} className="hover:bg-[#0e1117]/30 transition-colors group">
+                                    <td className="px-6 py-4 text-center text-xs font-mono font-bold text-slate-400">
                                         {formatDate(row.fecha)}
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-[10px]">
+                                            <div className="w-8 h-8 bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-400 font-bold text-[10px]">
                                                 {row.nombreAgente.substring(0, 2).toUpperCase()}
                                             </div>
-                                            <span className="text-xs font-bold text-gray-700">{row.nombreAgente}</span>
+                                            <span className="text-xs font-bold text-slate-200">{row.nombreAgente}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-center text-xs font-medium text-gray-400 italic">{row.horaEntradaProgramada}</td>
+                                    <td className="px-6 py-4 text-center text-xs font-medium text-slate-500 italic">{row.horaEntradaProgramada}</td>
                                     <td className="px-6 py-4 text-center">
-                                        <span className="text-xs font-black text-gray-800 bg-gray-100 px-2 py-1 rounded-lg">{row.horaEntradaReal}</span>
+                                        <span className="text-xs font-black text-slate-100 bg-slate-800 px-2 py-1 rounded-lg">{row.horaEntradaReal}</span>
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <span className="text-xs font-bold text-gray-500">{row.minutosRetardo} m</span>
+                                        <span className="text-xs font-bold text-slate-400">{row.minutosRetardo} m</span>
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         {row.estatusAsistencia === 'Ausente' || row.estatusAsistencia === 'Por Ingresar' ? (
-                                            <span className="text-xs font-bold text-gray-400 bg-gray-50 border border-gray-200 px-2 py-1 rounded-lg shadow-sm">0 LLAM</span>
+                                            <span className="text-xs font-bold text-slate-500 bg-[#0e1117] border border-slate-700 px-2 py-1 rounded-lg shadow-sm">0 LLAM</span>
                                         ) : row.impactoLlamadas > 0 ? (
-                                            <span className="text-xs font-black text-rose-500 bg-rose-50 px-2 py-1 rounded-lg">-{row.impactoLlamadas} LLAM</span>
+                                            <span className="text-xs font-black text-rose-500 bg-rose-900/20 px-2 py-1 rounded-lg">-{row.impactoLlamadas} LLAM</span>
                                         ) : (
                                             <span className="text-xs font-black text-purple-600 bg-purple-50 border border-purple-200 px-2 py-1 rounded-lg shadow-sm">0 LLAM</span>
                                         )}
@@ -258,32 +279,37 @@ const AttendanceReport: React.FC = () => {
                                         </button>
                                     </td>
                                 </tr>
-                            ))
-                        )}
+                            ));
+                        })()}
                     </tbody>
                 </table>
             </div>
 
             {/* Footer resumen */}
-            <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold uppercase tracking-widest px-2">
-                <p>Total registros: {attendance.length}</p>
-                <div className="flex gap-4">
-                    <span className="flex items-center gap-1 text-emerald-500">
-                        <UserCheck size={12} /> Puntuales: {attendance.filter(a => a.estatusAsistencia === 'A Tiempo').length}
-                    </span>
-                    <span className="flex items-center gap-1 text-rose-500">
-                        <AlertCircle size={12} /> Retardos: {attendance.filter(a => a.estatusAsistencia === 'Retardo').length}
-                    </span>
-                    <span className="flex items-center gap-1 text-gray-500">
-                        ✗ Ausentes: {attendance.filter(a => a.estatusAsistencia === 'Ausente').length}
-                    </span>
-                    <span className="flex items-center gap-1 text-amber-500 font-black">
-                        <Clock size={12} /> Impacto Total: -{attendance
-                            .filter(a => a.horaEntradaProgramada !== '23:00')
-                            .reduce((sum, a) => sum + (a.impactoLlamadas || 0), 0)} LLAM
-                    </span>
-                </div>
-            </div>
+            {(() => {
+                const filteredAttendance = attendance.filter(a => a.nombreAgente.toLowerCase().includes(searchTerm.toLowerCase()));
+                return (
+                    <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold uppercase tracking-widest px-2">
+                        <p>Total registros: {filteredAttendance.length}</p>
+                        <div className="flex gap-4">
+                            <span className="flex items-center gap-1 text-emerald-500">
+                                <UserCheck size={12} /> Puntuales: {filteredAttendance.filter(a => a.estatusAsistencia === 'A Tiempo').length}
+                            </span>
+                            <span className="flex items-center gap-1 text-rose-500">
+                                <AlertCircle size={12} /> Retardos: {filteredAttendance.filter(a => a.estatusAsistencia === 'Retardo').length}
+                            </span>
+                            <span className="flex items-center gap-1 text-slate-400">
+                                ✗ Ausentes: {filteredAttendance.filter(a => a.estatusAsistencia === 'Ausente').length}
+                            </span>
+                            <span className="flex items-center gap-1 text-amber-500 font-black">
+                                <Clock size={12} /> Impacto Total: -{filteredAttendance
+                                    .filter(a => a.horaEntradaProgramada !== '23:00')
+                                    .reduce((sum, a) => sum + (a.impactoLlamadas || 0), 0)} LLAM
+                            </span>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 };

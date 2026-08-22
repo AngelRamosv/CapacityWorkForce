@@ -106,8 +106,8 @@ const LiveDashboard: React.FC = () => {
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-                <Activity className="text-indigo-600 animate-pulse" size={48} />
-                <p className="text-gray-500 font-medium animate-pulse">Sincronizando con la central de datos...</p>
+                <Activity className="text-indigo-400 animate-pulse" size={48} />
+                <p className="text-slate-400 font-medium animate-pulse">Sincronizando con la central de datos...</p>
             </div>
         );
     }
@@ -115,20 +115,20 @@ const LiveDashboard: React.FC = () => {
     if (error && !data) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] space-y-6 text-center px-4">
-                <AlertTriangle className="text-rose-600" size={64} />
-                <h2 className="text-2xl font-black text-gray-900">Central de Datos Inalcanzable</h2>
-                <p className="text-gray-500 max-w-md mx-auto">
+                <AlertTriangle className="text-rose-400" size={64} />
+                <h2 className="text-2xl font-black text-slate-50">Central de Datos Inalcanzable</h2>
+                <p className="text-slate-400 max-w-md mx-auto">
                     No se pudo establecer conexión con el servidor de métricas.
                     Verifique su conexión a la red local.
                 </p>
-                <button onClick={() => window.location.reload()} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold">
+                <button onClick={() => window.location.reload()} className="bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold">
                     Reintentar
                 </button>
             </div>
         );
     }
 
-    if (!data) return <div className="p-10 text-center text-gray-500 font-mono text-xs">Awaiting data stream...</div>;
+    if (!data) return <div className="p-10 text-center text-slate-400 font-mono text-xs">Awaiting data stream...</div>;
 
     const metasLlamadas = config?.metaDiaria || 3195;
     const ahtReference = config?.tmoMinutos || 11.5;
@@ -206,15 +206,15 @@ const LiveDashboard: React.FC = () => {
         <div className="space-y-8 animate-in fade-in duration-700">
             <div className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
-                        <Activity className="text-rose-600" />
+                    <h1 className="text-3xl font-black text-slate-50 flex items-center gap-3">
+                        <Activity className="text-rose-400" />
                         Live Operations Center
                     </h1>
-                    <p className="text-gray-500 mt-2">Monitoreo activo de la operación actual.</p>
+                    <p className="text-slate-400 mt-2">Monitoreo activo de la operación actual.</p>
                 </div>
                 <div className="text-right flex flex-col items-end gap-2">
                     {data.isMock && (
-                        <span className="block text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold uppercase animate-pulse">
+                        <span className="block text-[10px] bg-amber-100 text-amber-300 px-2 py-1 rounded font-bold uppercase animate-pulse">
                             ⚠️ Modo Demo Activo
                         </span>
                     )}
@@ -222,13 +222,13 @@ const LiveDashboard: React.FC = () => {
                         <button
                             onClick={handleCloseDay}
                             disabled={isSaving}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition active:scale-95 disabled:opacity-50"
+                            className="bg-indigo-500 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition active:scale-95 disabled:opacity-50"
                         >
                             <Save size={16} />
                             {isSaving ? 'Guardando...' : 'Cerrar Día'}
                         </button>
                     </div>
-                    <p className="text-xs font-mono font-medium text-gray-400 mt-1">Actualizado: {lastUpdate.toLocaleTimeString()}</p>
+                    <p className="text-xs font-mono font-medium text-slate-500 mt-1">Actualizado: {lastUpdate.toLocaleTimeString()}</p>
                 </div>
             </div>
 
@@ -263,21 +263,21 @@ const LiveDashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
                     {/* Buscador y Filtros */}
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-center">
+                    <div className="bg-[#161a22] p-4 rounded-2xl shadow-sm border border-slate-800 flex flex-wrap gap-4 items-center">
                         <div className="relative flex-1 min-w-[200px]">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                             <input
                                 type="text"
                                 placeholder="Buscar por agente o supervisor..."
-                                className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500"
+                                className="w-full pl-10 pr-4 py-2 bg-[#0e1117] border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         <div className="flex items-center gap-2">
-                            <Filter size={16} className="text-gray-400" />
+                            <Filter size={16} className="text-slate-500" />
                             <select
-                                className="bg-gray-50 border-none rounded-xl text-sm py-2 px-4 focus:ring-2 focus:ring-indigo-500"
+                                className="bg-[#0e1117] border-none rounded-xl text-sm py-2 px-4 focus:ring-2 focus:ring-indigo-500"
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
                             >
@@ -289,36 +289,36 @@ const LiveDashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                                <UserCheck size={18} className="text-indigo-600" />
+                    <div className="bg-[#161a22] rounded-2xl shadow-sm border border-slate-800 overflow-hidden">
+                        <div className="p-4 bg-[#0e1117] border-b border-slate-800 flex justify-between items-center">
+                            <h3 className="font-bold text-slate-200 flex items-center gap-2">
+                                <UserCheck size={18} className="text-indigo-400" />
                                 Lista de Agentes Online
                             </h3>
-                            <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded">
+                            <span className="text-[10px] font-bold text-indigo-300 bg-indigo-900/30 px-2 py-1 rounded">
                                 {agentsList.length} FILTRADOS
                             </span>
                         </div>
                         <div className="max-h-[400px] overflow-y-auto">
                             <table className="w-full text-left text-xs">
-                                <thead className="bg-white sticky top-0 z-10 shadow-sm">
-                                    <tr className="text-gray-400 bg-gray-50/50">
+                                <thead className="bg-[#161a22] sticky top-0 z-10 shadow-sm">
+                                    <tr className="text-slate-500 bg-slate-800/30">
                                         <th className="px-6 py-2">Agente</th>
                                         <th className="px-6 py-2">Supervisor</th>
-                                        <th className="px-6 py-2 font-bold text-indigo-600">Tiempo en Estado</th>
+                                        <th className="px-6 py-2 font-bold text-indigo-400">Tiempo en Estado</th>
                                         <th className="px-6 py-2 text-right">Estatus</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50 text-gray-600">
+                                <tbody className="divide-y divide-slate-800/50 text-slate-300">
                                     {agentsList.map((agent: any, idx: number) => (
-                                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-3 font-semibold text-gray-800">{agent.name}</td>
-                                            <td className="px-6 py-3 text-gray-500">{agent.supervisor}</td>
-                                            <td className="px-6 py-3 font-mono font-bold text-indigo-600 italic">
+                                        <tr key={idx} className="hover:bg-[#0e1117] transition-colors">
+                                            <td className="px-6 py-3 font-semibold text-slate-100">{agent.name}</td>
+                                            <td className="px-6 py-3 text-slate-400">{agent.supervisor}</td>
+                                            <td className="px-6 py-3 font-mono font-bold text-indigo-400 italic">
                                                 {agent.time}
                                             </td>
                                             <td className="px-6 py-3 text-right">
-                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${agent.status === 'Disponible' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}`}>
+                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${agent.status === 'Disponible' ? 'bg-green-900/30 text-green-300' : 'bg-purple-900/30 text-purple-300'}`}>
                                                     {agent.status}
                                                 </span>
                                             </td>
@@ -326,7 +326,7 @@ const LiveDashboard: React.FC = () => {
                                     ))}
                                     {agentsList.length === 0 && (
                                         <tr>
-                                            <td colSpan={4} className="p-10 text-center text-gray-400 italic">No se encontraron agentes con esos filtros.</td>
+                                            <td colSpan={4} className="p-10 text-center text-slate-500 italic">No se encontraron agentes con esos filtros.</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -336,10 +336,10 @@ const LiveDashboard: React.FC = () => {
                 </div>
 
                 <div className="space-y-6">
-                    <div className="bg-indigo-600 p-8 rounded-3xl text-white shadow-xl shadow-indigo-100">
+                    <div className="bg-indigo-500 p-8 rounded-3xl text-white shadow-xl shadow-indigo-900/50 border border-indigo-400/20">
                         <div className="flex justify-between items-start">
                             <p className="text-xs font-bold uppercase opacity-80">Avance Actual (Corte)</p>
-                            <span className="text-[10px] bg-white/20 px-2 py-1 rounded font-mono">
+                            <span className="text-[10px] bg-[#161a22]/20 px-2 py-1 rounded font-mono">
                                 {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         </div>
@@ -349,7 +349,7 @@ const LiveDashboard: React.FC = () => {
                             <span className="text-sm opacity-80 mb-1 pb-1">del esperado</span>
                         </div>
 
-                        <div className="bg-white/20 h-2 rounded-full mt-5 overflow-hidden">
+                        <div className="bg-[#161a22]/20 h-2 rounded-full mt-5 overflow-hidden">
                             <div
                                 className={`h-full transition-all duration-1000 ${porcentajeCumplimientoCorte >= 100 ? 'bg-emerald-400' : 'bg-rose-400'}`}
                                 style={{ width: `${Math.min(100, porcentajeCumplimientoCorte)}%` }}
@@ -363,7 +363,7 @@ const LiveDashboard: React.FC = () => {
                             </div>
                             <div className="flex justify-between text-[10px] items-center">
                                 <span className="opacity-60 uppercase tracking-wider">Avance actual (Corte):</span>
-                                <span className="font-mono bg-white/10 px-1 rounded">{metaAlCorte}</span>
+                                <span className="font-mono bg-[#161a22]/10 px-1 rounded">{metaAlCorte}</span>
                             </div>
                             <div className="flex justify-between text-[10px] items-center text-teal-100 mt-2">
                                 <span className="uppercase tracking-wider">Total Día:</span>
@@ -384,55 +384,55 @@ const LiveDashboard: React.FC = () => {
                     )*/}
 
                     {/* MÓDULO DE RETARDOS Y DESVIACIONES */}
-                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-amber-100 relative overflow-hidden group">
+                    <div className="bg-[#161a22] p-6 rounded-3xl shadow-sm border border-slate-800 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-100 to-transparent -mr-8 -mt-8 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-4">
                                 <Clock className="text-amber-500" size={18} />
-                                <h4 className="font-bold text-gray-800 text-sm">Monitor de Puntualidad</h4>
+                                <h4 className="font-bold text-slate-100 text-sm">Monitor de Puntualidad</h4>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 mb-6">
-                                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100">
-                                    <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Retardo Entrada (Login)</p>
+                                <div className="bg-[#0e1117] p-3 rounded-2xl border border-slate-800">
+                                    <p className="text-[9px] text-slate-500 font-black uppercase mb-1">Retardo Entrada (Login)</p>
                                     <p className="text-2xl font-black text-rose-500">{data.puntualidad?.totalLoginDelay || 0}m</p>
                                 </div>
-                                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100">
-                                    <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Tiempo en Aux (Fuga)</p>
+                                <div className="bg-[#0e1117] p-3 rounded-2xl border border-slate-800">
+                                    <p className="text-[9px] text-slate-500 font-black uppercase mb-1">Tiempo en Aux (Fuga)</p>
                                     <p className="text-2xl font-black text-amber-500">{totalFugaMinutes}m</p>
                                 </div>
                             </div>
 
-                            <div className="pt-4 border-t border-gray-100">
-                                <p className="text-[10px] text-gray-400 font-bold uppercase mb-3 flex justify-between">
+                            <div className="pt-4 border-t border-slate-800">
+                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-3 flex justify-between">
                                     <span>Infractores de Hoy (Puntualidad)</span>
                                     <span className="text-rose-500">{(data.puntualidad?.tardyEntrants || []).length} detectados</span>
                                 </p>
                                 <div className="space-y-2 max-h-[100px] overflow-y-auto pr-2 custom-scrollbar mb-4">
                                     {(data.puntualidad?.tardyEntrants || []).length === 0 ? (
-                                        <p className="text-[10px] text-gray-400 italic">Sin retardos de entrada hoy.</p>
+                                        <p className="text-[10px] text-slate-500 italic">Sin retardos de entrada hoy.</p>
                                     ) : (
                                         (data.puntualidad?.tardyEntrants || []).map((agent: any, i: number) => (
-                                            <div key={i} className="flex justify-between items-center text-[11px] bg-rose-50/50 p-1.5 rounded-lg border border-rose-100/50">
-                                                <span className="font-bold text-gray-700 truncate max-w-[150px]">{agent.name}</span>
-                                                <span className="text-rose-600 font-black">+{agent.delay}m</span>
+                                            <div key={i} className="flex justify-between items-center text-[11px] bg-rose-900/20 p-1.5 rounded-lg border border-rose-800/30">
+                                                <span className="font-bold text-slate-200 truncate max-w-[150px]">{agent.name}</span>
+                                                <span className="text-rose-400 font-black">+{agent.delay}m</span>
                                             </div>
                                         ))
                                     )}
                                 </div>
 
-                                <p className="text-[10px] text-gray-400 font-bold uppercase mb-3 flex justify-between pt-2 border-t border-gray-50">
+                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-3 flex justify-between pt-2 border-t border-slate-800/50">
                                     <span>Exceso en Aux (Vivo)</span>
                                     <span className="text-amber-500">{tardyAgents.length} detectados</span>
                                 </p>
                                 <div className="space-y-2 max-h-[100px] overflow-y-auto pr-2 custom-scrollbar">
                                     {tardyAgents.length === 0 ? (
-                                        <p className="text-[10px] text-gray-400 italic">Todos en regla actualmente.</p>
+                                        <p className="text-[10px] text-slate-500 italic">Todos en regla actualmente.</p>
                                     ) : (
                                         tardyAgents.map((agent: any, i: number) => (
-                                            <div key={i} className="flex justify-between items-center text-[11px] bg-amber-50/50 p-1.5 rounded-lg border border-amber-100/50">
-                                                <span className="font-bold text-gray-700 truncate max-w-[150px]">{agent.name}</span>
-                                                <span className="text-amber-600 font-black">+{agent.minutes}m</span>
+                                            <div key={i} className="flex justify-between items-center text-[11px] bg-amber-900/20 p-1.5 rounded-lg border border-slate-800/50">
+                                                <span className="font-bold text-slate-200 truncate max-w-[150px]">{agent.name}</span>
+                                                <span className="text-amber-400 font-black">+{agent.minutes}m</span>
                                             </div>
                                         ))
                                     )}
@@ -445,30 +445,30 @@ const LiveDashboard: React.FC = () => {
 
             {/* MONITOR DE COBERTURA INTRADIA */}
             {coverageInfo && (
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mt-8">
+                <div className="bg-[#161a22] p-6 rounded-3xl shadow-sm border border-slate-800 mt-8">
                     <div className="flex items-center gap-3 mb-6">
                         <Activity className="text-indigo-500" size={24} />
-                        <h3 className="text-lg font-black text-gray-800 uppercase tracking-tighter">VOLUMEN DE LLAMADAS</h3>
+                        <h3 className="text-lg font-black text-slate-100 uppercase tracking-tighter">VOLUMEN DE LLAMADAS</h3>
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-8 mb-6">
                         {/* Acumulado Global (Izquierda) */}
-                        <div className="w-full md:w-1/3 flex flex-col justify-center bg-gray-50/50 p-6 rounded-2xl border border-gray-50">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Total Acumulado (En Vivo)</p>
-                            <p className="text-5xl font-black text-indigo-600 mb-1">{data?.llamadas_ingresadas || 0}</p>
-                            <p className="text-xs font-bold text-gray-400 mb-6 tracking-wide">LLAMADAS RECIBIDAS</p>
+                        <div className="w-full md:w-1/3 flex flex-col justify-center bg-slate-800/30 p-6 rounded-2xl border border-slate-800/50">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Total Acumulado (En Vivo)</p>
+                            <p className="text-5xl font-black text-indigo-400 mb-1">{data?.llamadas_ingresadas || 0}</p>
+                            <p className="text-xs font-bold text-slate-500 mb-6 tracking-wide">LLAMADAS RECIBIDAS</p>
 
-                            <div className="pt-4 border-t border-gray-200/60">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Meta Fija Esperada del Día</p>
-                                <p className="text-2xl font-black text-gray-700">{coverageInfo.dailyGoal || 0} <span className="text-xs font-medium text-gray-400">llamadas</span></p>
+                            <div className="pt-4 border-t border-slate-700/60">
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Meta Fija Esperada del Día</p>
+                                <p className="text-2xl font-black text-slate-200">{coverageInfo.dailyGoal || 0} <span className="text-xs font-medium text-slate-500">llamadas</span></p>
                                 
                                 {/* Evaluación de Meta Estética (Solo después de las 9 PM) */}
                                 {coverageInfo && new Date().getHours() >= 21 && (
-                                    <div className={`mt-3 p-3 rounded-xl border-2 text-center animate-in zoom-in duration-500 ${(data.abandonadas_total / data.llamadas_ingresadas) * 100 <= 10 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
-                                        <p className={`text-[10px] font-black uppercase tracking-widest ${(data.abandonadas_total / data.llamadas_ingresadas) * 100 <= 10 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    <div className={`mt-3 p-3 rounded-xl border-2 text-center animate-in zoom-in duration-500 ${(data.abandonadas_total / data.llamadas_ingresadas) * 100 <= 10 ? 'bg-emerald-900/20 border-emerald-800/50' : 'bg-rose-900/20 border-rose-800/50'}`}>
+                                        <p className={`text-[10px] font-black uppercase tracking-widest ${(data.abandonadas_total / data.llamadas_ingresadas) * 100 <= 10 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                             {(data.abandonadas_total / data.llamadas_ingresadas) * 100 <= 10 ? '🎉 META CUMPLIDA' : 'META NO ALCANZADA'}
                                         </p>
-                                        <p className="text-[9px] text-gray-500 font-bold mt-1">
+                                        <p className="text-[9px] text-slate-400 font-bold mt-1">
                                             Abandono: {data.llamadas_ingresadas > 0 ? Math.round((data.abandonadas_total / data.llamadas_ingresadas) * 100) : 0}%
                                         </p>
                                     </div>
@@ -477,13 +477,13 @@ const LiveDashboard: React.FC = () => {
                         </div>
 
                         {/* Histograma (Derecha) */}
-                        <div className="w-full md:w-2/3 h-64 relative border-b-2 border-gray-100 pb-6 flex items-end justify-between px-2 pt-10">
+                        <div className="w-full md:w-2/3 h-64 relative border-b-2 border-slate-800 pb-6 flex items-end justify-between px-2 pt-10">
                             {/* Eje Y de fondo */}
                             <div className="absolute inset-0 z-0 flex flex-col justify-between pointer-events-none pb-6">
-                                <div className="border-b border-gray-100 w-full h-0"></div>
-                                <div className="border-b border-gray-100 w-full h-0"></div>
-                                <div className="border-b border-gray-100 w-full h-0"></div>
-                                <div className="border-b border-gray-100 w-full h-0"></div>
+                                <div className="border-b border-slate-800 w-full h-0"></div>
+                                <div className="border-b border-slate-800 w-full h-0"></div>
+                                <div className="border-b border-slate-800 w-full h-0"></div>
+                                <div className="border-b border-slate-800 w-full h-0"></div>
                             </div>
 
 
@@ -497,45 +497,45 @@ const LiveDashboard: React.FC = () => {
 
                                 let barColor = 'bg-gray-200 group-hover:bg-gray-300'; // Horas futuras (Pronóstico)
                                 if (item.realCalls !== null && item.expected !== null) {
-                                    barColor = item.realCalls >= item.expected ? 'bg-emerald-400 group-hover:bg-emerald-500' : 'bg-amber-400 group-hover:bg-amber-500';
+                                    barColor = item.realCalls >= item.expected ? 'bg-emerald-400 group-hover:bg-emerald-900/200' : 'bg-amber-400 group-hover:bg-amber-900/200';
                                 }
 
                                 return (
                                     <div key={i} className="flex flex-col items-center group relative w-full h-full justify-end z-10 px-0.5 sm:px-1">
                                         <div className="absolute -top-14 bg-gray-800 text-white text-[10px] font-bold py-2 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition shadow-lg pointer-events-none z-10 text-left border border-gray-700 leading-tight min-w-[110px]">
-                                            <p className="border-b border-gray-600 pb-1 mb-1 text-gray-400 uppercase tracking-wider text-center">{item.hour}</p>
+                                            <p className="border-b border-gray-600 pb-1 mb-1 text-slate-500 uppercase tracking-wider text-center">{item.hour}</p>
                                             <div className="flex justify-between items-center mb-0.5">
                                                 <span className="text-gray-300">Meta:</span>
                                                 <span className="text-gray-100">{item.expected}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-300">Reales:</span>
-                                                <span className={(item.expected === null) ? 'text-gray-400' : (item.realCalls >= item.expected ? 'text-emerald-400' : 'text-amber-400')}>{item.realCalls !== null ? item.realCalls : '--'}</span>
+                                                <span className={(item.expected === null) ? 'text-slate-500' : (item.realCalls >= item.expected ? 'text-emerald-400' : 'text-amber-400')}>{item.realCalls !== null ? item.realCalls : '--'}</span>
                                             </div>
                                         </div>
                                         <div
                                             className={`w-full rounded-t-sm transition-all duration-1000 ease-out cursor-pointer ${barColor}`}
                                             style={{ height: `${Math.max(2, heightPct)}%` }}
                                         />
-                                        <p className="text-[10px] font-bold mt-2 text-gray-400 absolute -bottom-6 whitespace-nowrap">{item.hour.split(' ')[0]}</p>
+                                        <p className="text-[10px] font-bold mt-2 text-slate-500 absolute -bottom-6 whitespace-nowrap">{item.hour.split(' ')[0]}</p>
                                     </div>
                                 );
                             })}
                         </div>
                         <div className="flex justify-center gap-6 mt-4">
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-400 rounded-[2px]" /><span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Superó Meta</span></div>
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-amber-400 rounded-[2px]" /><span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Bajo Meta</span></div>
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-gray-200 rounded-[2px]" /><span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Pronóstico</span></div>
+                            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-400 rounded-[2px]" /><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Superó Meta</span></div>
+                            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-amber-400 rounded-[2px]" /><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Bajo Meta</span></div>
+                            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-gray-200 rounded-[2px]" /><span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pronóstico</span></div>
                         </div>
                     </div>
 
                     <div className="mt-8 relative">
                         <div className="flex items-center gap-2 mb-4">
                             <Activity className="text-rose-500" size={20} />
-                            <h4 className="font-black text-gray-800 uppercase tracking-wider text-sm">REACOMODO DE AGENTES</h4>
-                            {coverageInfo.isWeekend && <span className="text-[10px] bg-gray-200 text-gray-500 font-bold px-2 py-0.5 rounded uppercase ml-2">No Disponible en Fines de Semana</span>}
+                            <h4 className="font-black text-slate-100 uppercase tracking-wider text-sm">REACOMODO DE AGENTES</h4>
+                            {coverageInfo.isWeekend && <span className="text-[10px] bg-gray-200 text-slate-400 font-bold px-2 py-0.5 rounded uppercase ml-2">No Disponible en Fines de Semana</span>}
                         </div>
-                        <div className={`bg-white p-5 rounded-2xl border border-gray-200 shadow-sm ${coverageInfo.isWeekend ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+                        <div className={`bg-[#161a22] p-5 rounded-2xl border border-slate-700 shadow-sm ${coverageInfo.isWeekend ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
                             {coverageInfo.nightHourlyRequirements && coverageInfo.nightHourlyRequirements.length > 0 ? (
                                 <div className="space-y-4">
                                     {coverageInfo.nightHourlyRequirements.map((req: any, i: number) => {
@@ -557,34 +557,34 @@ const LiveDashboard: React.FC = () => {
                                         const forceEnEspera = showQuestionMark;
 
                                         return (
-                                            <div key={i} className="flex flex-col md:flex-row md:items-center gap-4 bg-gray-50/50 p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+                                            <div key={i} className="flex flex-col md:flex-row md:items-center gap-4 bg-slate-800/30 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition-colors">
                                                 <div className="w-16">
-                                                    <span className="font-black text-gray-700">{req.hour}</span>
+                                                    <span className="font-black text-slate-200">{req.hour}</span>
                                                 </div>
                                                 
                                                 <div className="flex-1">
                                                     <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1.5 overflow-hidden flex">
                                                         <div className={`h-full rounded-full transition-all duration-1000 ${real >= expected ? 'bg-emerald-400' : 'bg-indigo-400'}`} style={{ width: `${pct}%` }}></div>
                                                     </div>
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex justify-between">
-                                                        <span>Reales: <span className="text-gray-600">{req.realCalls !== null ? req.realCalls : '--'}</span> / Meta: {req.expected || '--'}</span>
-                                                        <span className="text-gray-400">Req: {req.requiredAgents} agts | Asignados: {assignedAgents !== null ? assignedAgents : '?'} agts</span>
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex justify-between">
+                                                        <span>Reales: <span className="text-slate-300">{req.realCalls !== null ? req.realCalls : '--'}</span> / Meta: {req.expected || '--'}</span>
+                                                        <span className="text-slate-500">Req: {req.requiredAgents} agts | Asignados: {assignedAgents !== null ? assignedAgents : '?'} agts</span>
                                                     </p>
                                                 </div>
                                                 
                                                 <div className="w-full md:w-auto md:min-w-[160px] flex justify-end">
                                                     {forceEnEspera ? (
-                                                        <span className="bg-gray-100 border border-gray-200 text-gray-500 text-[11px] font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 whitespace-nowrap w-full md:w-auto justify-center shadow-sm">
-                                                            <Clock size={14} className="text-gray-400" />
+                                                        <span className="bg-slate-800 border border-slate-700 text-slate-400 text-[11px] font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 whitespace-nowrap w-full md:w-auto justify-center shadow-sm">
+                                                            <Clock size={14} className="text-slate-500" />
                                                             En Espera
                                                         </span>
                                                     ) : isOk ? (
-                                                        <span className="bg-emerald-50 border border-emerald-200 text-emerald-600 text-[11px] font-black px-4 py-2 rounded-lg flex items-center gap-1.5 whitespace-nowrap shadow-sm w-full md:w-auto justify-center">
-                                                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                                        <span className="bg-emerald-900/20 border border-emerald-800/50 text-emerald-400 text-[11px] font-black px-4 py-2 rounded-lg flex items-center gap-1.5 whitespace-nowrap shadow-sm w-full md:w-auto justify-center">
+                                                            <div className="w-2 h-2 rounded-full bg-emerald-900/200"></div>
                                                             Cobertura Ok
                                                         </span>
                                                     ) : (
-                                                        <span className="bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-black px-4 py-2 rounded-lg flex items-center gap-1.5 whitespace-nowrap shadow-sm w-full md:w-auto justify-center">
+                                                        <span className="bg-rose-900/20 border border-rose-800/50 text-rose-400 text-[11px] font-black px-4 py-2 rounded-lg flex items-center gap-1.5 whitespace-nowrap shadow-sm w-full md:w-auto justify-center">
                                                             <AlertTriangle size={14} className="text-rose-500 animate-pulse" />
                                                             Mover {currentDeficit} agentes
                                                         </span>
@@ -595,7 +595,7 @@ const LiveDashboard: React.FC = () => {
                                     })}
                                 </div>
                             ) : (
-                                <p className="text-sm text-gray-400 font-bold italic p-4 text-center">Datos de reacomodo no disponibles.</p>
+                                <p className="text-sm text-slate-500 font-bold italic p-4 text-center">Datos de reacomodo no disponibles.</p>
                             )}
                         </div>
                     </div>
@@ -608,15 +608,15 @@ const LiveDashboard: React.FC = () => {
 
 const MetricCard = ({ title, value, icon, alert, color }: any) => {
     const colors: any = {
-        blue: 'bg-blue-50 text-blue-600 border-blue-100',
-        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-        rose: 'bg-rose-50 text-rose-600 border-rose-100',
-        amber: 'bg-amber-50 text-amber-600 border-amber-100'
+        blue: 'bg-blue-900/20 text-blue-400 border-slate-800',
+        indigo: 'bg-indigo-900/30 text-indigo-400 border-slate-800',
+        rose: 'bg-rose-900/20 text-rose-400 border-rose-100',
+        amber: 'bg-amber-900/20 text-amber-400 border-slate-800'
     };
     return (
         <div className={`p-6 rounded-2xl border ${colors[color]} ${alert ? 'ring-2 ring-rose-300' : ''}`}>
             <div className="flex justify-between items-center mb-4">
-                <div className="p-2 bg-white rounded-lg shadow-sm">{icon}</div>
+                <div className="p-2 bg-[#161a22] rounded-lg shadow-sm">{icon}</div>
                 {alert && <span className="text-[9px] font-black bg-rose-600 text-white px-2 py-1 rounded">ALERTA</span>}
             </div>
             <p className="text-[10px] font-bold uppercase opacity-60">{title}</p>

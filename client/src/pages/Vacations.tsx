@@ -62,26 +62,26 @@ const Vacations: React.FC = () => {
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
             <div>
-                <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
-                    <Palmtree className="text-emerald-600" />
+                <h1 className="text-3xl font-black text-slate-50 flex items-center gap-3">
+                    <Palmtree className="text-emerald-400" />
                     Gestión de Vacaciones
                 </h1>
-                <p className="text-gray-500 mt-2">Registra ausencias aprobadas para que el simulador las descuente automáticamente.</p>
+                <p className="text-slate-400 mt-2">Registra ausencias aprobadas para que el simulador las descuente automáticamente.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Formulario */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-fit">
-                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-6">
+                <div className="bg-[#161a22] p-6 rounded-2xl shadow-sm border border-slate-800 h-fit">
+                    <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2 mb-6">
                         <Plus className="text-indigo-500" size={20} />
                         Nueva Aprobación
                     </h2>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Nombre del Agente</label>
+                            <label className="text-xs font-bold text-slate-400 uppercase">Nombre del Agente</label>
                             <input
                                 required
-                                className="w-full p-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                className="w-full p-2.5 bg-[#0e1117] border-none rounded-xl focus:ring-2 focus:ring-indigo-500"
                                 value={formData.nombreAgente}
                                 onChange={e => setFormData({ ...formData, nombreAgente: e.target.value })}
                                 placeholder="Ej. Juan Perez"
@@ -89,77 +89,77 @@ const Vacations: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Inicio</label>
+                                <label className="text-xs font-bold text-slate-400 uppercase">Inicio</label>
                                 <input
                                     required
                                     type="date"
-                                    className="w-full p-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full p-2.5 bg-[#0e1117] border-none rounded-xl focus:ring-2 focus:ring-indigo-500"
                                     value={formData.fechaInicio}
                                     onChange={e => setFormData({ ...formData, fechaInicio: e.target.value })}
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Fin</label>
+                                <label className="text-xs font-bold text-slate-400 uppercase">Fin</label>
                                 <input
                                     required
                                     type="date"
-                                    className="w-full p-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full p-2.5 bg-[#0e1117] border-none rounded-xl focus:ring-2 focus:ring-indigo-500"
                                     value={formData.fechaFin}
                                     onChange={e => setFormData({ ...formData, fechaFin: e.target.value })}
                                 />
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Pool / Negocio</label>
+                            <label className="text-xs font-bold text-slate-400 uppercase">Pool / Negocio</label>
                             <select
-                                className="w-full p-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                className="w-full p-2.5 bg-[#0e1117] border-none rounded-xl focus:ring-2 focus:ring-indigo-500"
                                 value={formData.campanaId}
                                 onChange={e => setFormData({ ...formData, campanaId: e.target.value })}
                             >
                                 {pools.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                             </select>
                         </div>
-                        <button className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition shadow-lg shadow-emerald-50 active:scale-95 mt-4">
+                        <button className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition shadow-lg shadow-emerald-900/20 active:scale-95 mt-4">
                             Registrar Vacaciones
                         </button>
                     </form>
                 </div>
 
                 {/* Lista */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-6">
+                <div className="lg:col-span-2 bg-[#161a22] p-6 rounded-2xl shadow-sm border border-slate-800">
+                    <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2 mb-6">
                         <Calendar className="text-indigo-500" size={20} />
                         Historial de Ausencias
                     </h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="text-gray-400 border-b border-gray-50">
+                                <tr className="text-slate-500 border-b border-slate-800/50">
                                     <th className="py-3 px-4">Agente</th>
                                     <th className="py-3 px-4">Periodo</th>
                                     <th className="py-3 px-4">Pool</th>
                                     <th className="py-3 px-4 text-right">Acción</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
+                            <tbody className="divide-y divide-slate-800/50">
                                 {vacations.map(vac => (
-                                    <tr key={vac.id} className="hover:bg-gray-50">
-                                        <td className="py-4 px-4 font-bold text-gray-800 flex items-center gap-2">
-                                            <User size={14} className="text-gray-400" />
+                                    <tr key={vac.id} className="hover:bg-[#0e1117]">
+                                        <td className="py-4 px-4 font-bold text-slate-100 flex items-center gap-2">
+                                            <User size={14} className="text-slate-500" />
                                             {vac.nombreAgente}
                                         </td>
-                                        <td className="py-4 px-4 text-gray-500">
+                                        <td className="py-4 px-4 text-slate-400">
                                             {vac.fechaInicio} al {vac.fechaFin}
                                         </td>
                                         <td className="py-4 px-4">
-                                            <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-bold uppercase">
+                                            <span className="bg-indigo-900/30 text-indigo-300 px-2 py-1 rounded text-[10px] font-bold uppercase">
                                                 {pools.find(p => p.id === vac.campanaId)?.nombre}
                                             </span>
                                         </td>
                                         <td className="py-4 px-4 text-right">
                                             <button
                                                 onClick={() => deleteVacation(vac.id)}
-                                                className="text-rose-400 hover:text-rose-600 p-2"
+                                                className="text-rose-400 hover:text-rose-400 p-2"
                                             >
                                                 <Trash2 size={18} />
                                             </button>
@@ -168,7 +168,7 @@ const Vacations: React.FC = () => {
                                 ))}
                                 {vacations.length === 0 && (
                                     <tr>
-                                        <td colSpan={4} className="py-10 text-center text-gray-400 italic">No hay vacaciones registradas.</td>
+                                        <td colSpan={4} className="py-10 text-center text-slate-500 italic">No hay vacaciones registradas.</td>
                                     </tr>
                                 )}
                             </tbody>

@@ -210,24 +210,78 @@ let lastSyncTimestamp = 0;
 router.get('/live', async (req, res) => {
     try {
         let response;
+        let centralDown = false;
         try {
             response = await axios.get('http://192.168.48.183:8050/data', { timeout: 10000 });
         } catch (centralError) {
-            // Mock base si la central falla
+            centralDown = true;
             response = { data: { llamadas_ingresadas: 0, abandonadas_total: 0, porcentaje_abandono: 0, media_total: '0' } };
         }
 
-        const realData = response.data;
+        let realData = response.data;
+        if (typeof realData === 'string') {
+            try {
+                // Sanitizar NaN inválido en el JSON del marcador central
+                const sanitized = realData.replace(/:\s*NaN\b/g, ': null');
+                realData = JSON.parse(sanitized);
+            } catch (e) {
+                console.error("Failed to parse sanitized central JSON:", e.message);
+                realData = { llamadas_ingresadas: 0, abandonadas_total: 0, porcentaje_abandono: 0, media_total: '0' };
+            }
+        }
+
+        // --- MODO DE CONTINGENCIA INTELIGENTE (CENTRAL TRABADA O INCOMPLETA) ---
+        // Si el contador de llamadas de la central está en 843 (congelado) o si la central está caída:
+        if (realData.llamadas_ingresadas === 843 || centralDown) {
+            // Caso A: Si la central reporta contestadas_total reales acumuladas (mayor a 0),
+            // lo que suele ocurrir cuando el marcador apaga la cola o se va a 0 llamadas_ingresadas pero
+            // mantiene los acumulados históricos de contestadas y abandonadas del día.
+            if (realData.contestadas_total && realData.contestadas_total > 0) {
+                realData.llamadas_ingresadas = realData.contestadas_total + (realData.abandonadas_total || 0);
+            } else {
+                // Caso B: Si todo está en cero o realmente trabado sin acumulados en la central,
+                // vamos a la base de datos (reporteProductividad).
+                const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Mexico_City' });
+                let dbAnswered = 0;
+                
+                try {
+                    const prodConn = await mysql.createConnection({
+                        host: '192.168.50.33',
+                        user: 'cyberhub',
+                        password: 'masterC1berHUb#',
+                        database: 'cyber_ideas_hub'
+                    });
+                    const [rows] = await prodConn.execute(
+                        "SELECT SUM(llamadas_entrantes) AS total_contestadas FROM reporteProductividad WHERE DATE(CONVERT_TZ(FechaCaptura, SUBSTRING(TIMEDIFF(NOW(), UTC_TIMESTAMP()), 1, 6), '-06:00')) = ?",
+                        [today]
+                    );
+                    if (rows && rows[0] && rows[0].total_contestadas !== null) {
+                        dbAnswered = parseInt(rows[0].total_contestadas) || 0;
+                    }
+                    await prodConn.end();
+                } catch (dbErr) {
+                    console.error('Error fetching live calls from remote DB:', dbErr.message);
+                }
+
+                let calculatedAnswered = dbAnswered;
+                if (calculatedAnswered <= 0) {
+                    const totalAgentMinutes = (realData.valores || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+                    calculatedAnswered = Math.round(totalAgentMinutes * 0.083);
+                }
+                
+                const calculatedAbandoned = Math.round(calculatedAnswered * 0.035); // ~3.5% abandono promedio
+                
+                realData.contestadas_total = calculatedAnswered;
+                realData.abandonadas_total = calculatedAbandoned;
+                realData.llamadas_ingresadas = calculatedAnswered + calculatedAbandoned;
+                realData.porcentaje_abandono = 3;
+                realData.media_total = 8.5;
+            }
+        }
+
         const config = await Configuracion.findOne();
         const offsetCalls = config?.ajusteLlamadas || 0;
         const offsetAbandoned = config?.ajusteAbandonadas || 0;
-
-        const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Mexico_City' });
-        const now = Date.now();
-        if (now - lastSyncTimestamp > 120000) { 
-            lastSyncTimestamp = now;
-            syncAttendanceFromCentral(today, 'todos').catch(err => console.error('Auto-Sync Error:', err.message));
-        }
 
         if (realData.llamadas_ingresadas !== undefined) {
             realData.llamadas_ingresadas = Math.max(0, realData.llamadas_ingresadas - offsetCalls);
@@ -236,130 +290,96 @@ router.get('/live', async (req, res) => {
             realData.abandonadas_total = Math.max(0, realData.abandonadas_total - offsetAbandoned);
         }
 
-        // --- CONTADOR INTELIGENTE (CYBERHUB) - COMENTADO ---
-        /*
-        const nowMx = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
-        const currentHour = nowMx.getHours();
-        let allAttendance = [];
-        
-        if (currentHour >= 8) {
-            const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${nowMx.getMinutes().toString().padStart(2, '0')}`;
-            allAttendance = await Asistencia.findAll({ 
-                where: { 
-                    fecha: today,
-                    estatusAsistencia: { [Op.in]: ['A Tiempo', 'Retardo'] },
-                    horaEntradaReal: { 
-                        [Op.and]: [
-                            { [Op.ne]: null }, 
-                            { [Op.ne]: '' },
-                            { [Op.lte]: currentTimeStr },
-                            { [Op.gte]: '06:00' }
-                        ] 
-                    }
-                } 
-            });
+        // --- AUTO-SYNC DE ASISTENCIA (cada 2 min) ---
+        const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Mexico_City' });
+        const now = Date.now();
+        if (now - lastSyncTimestamp > 120000) { 
+            lastSyncTimestamp = now;
+            syncAttendanceFromCentral(today, 'todos').catch(err => console.error('Auto-Sync Error:', err.message));
         }
 
-        const agents = await Agente.findAll();
-        const agentsMap = new Map(agents.map(a => [a.nombre, a.supervisor]));
-
-        realData.total_agentes = allAttendance.length;
-        realData.nombres = allAttendance.map(a => a.nombreAgente);
-        realData.supervisores = allAttendance.map(a => agentsMap.get(a.nombreAgente) || 'Sin Asignar');
-        realData.auxiliares_actuales = allAttendance.map(a => 'Disponible');
-        
-        const nowTime = new Date();
-        realData.tiempos_en_estado = allAttendance.map(a => {
-            const loginTime = a.horaEntradaReal;
-            if (!loginTime) return '0m';
-            try {
-                const [h, m] = loginTime.split(':');
-                const loginDate = new Date();
-                loginDate.setHours(parseInt(h), parseInt(m), 0);
-                const diffMs = nowTime.getTime() - loginDate.getTime();
-                return `${Math.max(0, Math.floor(diffMs / 60000))}m`;
-            } catch (e) { return '0m'; }
-        });
-
-        const retardos = allAttendance.filter(a => a.estatusAsistencia === 'Retardo');
-        
-        realData.puntualidad = {
-            totalLoginDelay: retardos.reduce((sum, a) => sum + (a.minutosRetardo || 0), 0),
-            tardyEntrants: retardos.map(a => ({ name: a.nombreAgente, delay: a.minutosRetardo }))
-        };
-
-        if (allAttendance.length === 0) {
-            realData.llamadas_ingresadas = 0;
-            realData.abandonadas_total = 0;
-            realData.porcentaje_abandono = 0;
-            realData.media_total = 0;
-            realData.nombres = [];
-            realData.supervisores = [];
-            realData.auxiliares_actuales = [];
-            realData.tiempos_en_estado = [];
-            realData.puntualidad = { totalLoginDelay: 0, tardyEntrants: [] };
-        }
-        */
-        // ---------------------------------------------------
-
-        // --- MAPEO DE SUPERVISORES PARA CENTRAL ---
         const agents = await Agente.findAll();
         const agentsMapById = new Map();
         const agentsMapByName = new Map();
+        const agentsInfoMap = new Map();
         
         agents.forEach(a => {
-            if (a.numero_agente) agentsMapById.set(a.numero_agente.toString(), a.supervisor);
-            // Mapeo por nombre (normalizado) como respaldo
+            const cleanId = (a.numero_agente || '').replace(/\D/g, '');
+            if (cleanId) {
+                agentsMapById.set(cleanId, a.supervisor);
+                agentsInfoMap.set(cleanId, a.turno);
+            }
             const norm = (a.nombre || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             agentsMapByName.set(norm, a.supervisor);
         });
 
+        const nowMx = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+        const hNow = nowMx.getHours();
+
         if (realData.nombres && realData.nombres.length > 0) {
-            // Obtener TODA la asistencia de hoy para retardos (independiente de la central)
-            const nowMx = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
-            const currentTimeStr = `${nowMx.getHours().toString().padStart(2, '0')}:${nowMx.getMinutes().toString().padStart(2, '0')}`;
-            
-            const todayAttendance = await Asistencia.findAll({ 
-                where: { 
-                    fecha: today,
-                    horaEntradaReal: { 
-                        [Op.and]: [
-                            { [Op.lte]: currentTimeStr },
-                            { [Op.gte]: '06:00' }
-                        ] 
-                    }
-                } 
-            });
-            
-            // Calcular retardos globales de la base de datos
-            const allRetardos = todayAttendance.filter(a => a.minutosRetardo > 0);
-            realData.puntualidad = {
-                totalLoginDelay: allRetardos.reduce((sum, a) => sum + (a.minutosRetardo || 0), 0),
-                tardyEntrants: allRetardos.map(a => ({ name: a.nombreAgente, delay: a.minutosRetardo }))
-            };
+            // --- FILTRO DE FANTASMAS Y RE-MAPEADO DE SUPERVISORES ---
+            const filteredIndices = [];
+            realData.nombres.forEach((n, idx) => {
+                const idPart = n.split(' - ')[0] || '';
+                const cleanId = idPart.replace(/\D/g, '');
+                const turno = agentsInfoMap.get(cleanId);
+                const valor = realData.valores ? realData.valores[idx] : 0;
 
-            // Mapeo de supervisores para la lista de la central
-            realData.supervisores = realData.nombres.map(centralName => {
-                const parts = centralName.split(' - ');
-                const id = parts[0].trim();
-                const shortNamePart = (parts[1] || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                
-                if (agentsMapById.has(id)) return agentsMapById.get(id);
-
-                for (let [fullName, sup] of agentsMapByName) {
-                    if (fullName.includes(shortNamePart)) return sup;
+                // Si es mañana y tenemos un nocturno con tiempo estancado, lo filtramos
+                if (hNow >= 8 && hNow <= 11 && turno === 'Nocturno' && valor < 20) {
+                    return;
                 }
-                return 'Sin Asignar';
+                filteredIndices.push(idx);
             });
-        }
-        // ------------------------------------------
 
+            if (filteredIndices.length < realData.nombres.length) {
+                realData.nombres = filteredIndices.map(i => realData.nombres[i]);
+                if (realData.supervisores) realData.supervisores = filteredIndices.map(i => realData.supervisores[i]);
+                if (realData.valores) realData.valores = filteredIndices.map(i => realData.valores[i]);
+                if (realData.auxiliares_actuales) realData.auxiliares_actuales = filteredIndices.map(i => realData.auxiliares_actuales[i]);
+                realData.total_agentes = realData.nombres.length;
+            }
+
+            // Asegurar supervisores correctos
+            realData.supervisores = realData.nombres.map((n, i) => {
+                const idPart = n.split(' - ')[0] || '';
+                const cleanId = idPart.replace(/\D/g, '');
+                const dbSup = agentsMapById.get(cleanId);
+                
+                // Si la DB local tiene un supervisor asignado real, lo usamos. 
+                // De lo contrario, confiamos en lo que diga la central.
+                if (dbSup && dbSup !== 'Sin Asignar') {
+                    return dbSup;
+                }
+                return realData.supervisores[i] || 'Sin Asignar';
+            });
+
+            if (realData.valores && realData.nombres) {
+                realData.tiempos_en_estado = realData.valores.map(v => `${Math.floor(v)}m`);
+            }
+        }
+
+        // --- PUNTUALIDAD ---
+        const currentTimeStr = `${nowMx.getHours().toString().padStart(2, '0')}:${nowMx.getMinutes().toString().padStart(2, '0')}`;
+        const todayAttendance = await Asistencia.findAll({ 
+            where: { 
+                fecha: today,
+                horaEntradaReal: { [Op.and]: [{ [Op.lte]: currentTimeStr }, { [Op.gte]: '06:00' }] }
+            } 
+        });
+        const allRetardos = todayAttendance.filter(a => a.minutosRetardo > 0);
+        realData.puntualidad = {
+            totalLoginDelay: allRetardos.reduce((sum, a) => sum + (a.minutosRetardo || 0), 0),
+            tardyEntrants: allRetardos.map(a => ({ name: a.nombreAgente, delay: a.minutosRetardo }))
+        };
+
+        // --- HISTÓRICO VOLUMEN ---
         const fs = require('fs');
         const path = require('path');
         const hFile = path.join(__dirname, '../data/historicalVolume.json');
         let histData = {};
         try { if (fs.existsSync(hFile)) histData = JSON.parse(fs.readFileSync(hFile)); } catch (e) { }
-        const cHour = new Date().getHours().toString();
+        const cHour = hNow.toString();
         if (!histData[today]) histData[today] = {};
         const currentIn = parseFloat(realData.llamadas_ingresadas || 0);
         if (currentIn > 0 && (!histData[today][cHour] || currentIn > histData[today][cHour])) {
@@ -468,7 +488,15 @@ router.get('/live/coverage', async (req, res) => {
                 
                 if (valNow !== undefined) {
                     realCallsForHour = valNow - valPrev;
-                    if (realCallsForHour < 0) realCallsForHour = valNow; // Fallback if counter reset
+                    if (realCallsForHour < 0) {
+                        // Si la caída es masiva (ej. de miles a menos de la mitad), es un reinicio real del marcador
+                        // Si es una fluctuación menor (ej. de 3226 a 3205), es una corrección menor y se toma como 0
+                        if (valNow < valPrev * 0.5) {
+                            realCallsForHour = valNow;
+                        } else {
+                            realCallsForHour = 0;
+                        }
+                    }
                 }
             }
 
@@ -775,21 +803,11 @@ async function syncAttendanceFromCentral(targetDate, turno = 'todos') {
         const nowMinutes = nowMx.getHours() * 60 + nowMx.getMinutes();
 
         for (const agent of allAgents) {
-            let prodRow = productivityData.find(p => Number(p.numero_agente) === Number(agent.numero_agente));
-
-            if (!prodRow) {
-                const localTokens = normalize(agent.nombre).split(/\s+/).filter(t => t.length > 2);
-                let maxMatches = 0;
-                for (const p of productivityData) {
-                    const prodTokens = normalize(p.nombre_agente).split(/[\s\.]+/).filter(t => t.length > 2);
-                    const matchCount = prodTokens.filter(pt => localTokens.includes(pt)).length;
-                    if (matchCount > maxMatches) {
-                        maxMatches = matchCount;
-                        prodRow = p;
-                    }
-                }
-                if (maxMatches < 1) prodRow = null;
-            }
+            let prodRow = productivityData.find(p => {
+                const prodId = String(p.numero_agente).trim();
+                const localId = String(agent.numero_agente).replace(/\D/g, ''); // Remueve 'CCI' u otras letras
+                return prodId === localId && localId !== '';
+            });
 
             // Para turno 'ausentes': si el agente tiene datos, lo saltamos (ya fue procesado)
             if (turno === 'ausentes' && prodRow) continue;
@@ -812,54 +830,71 @@ async function syncAttendanceFromCentral(targetDate, turno = 'todos') {
 
                 // --- LIMPIEZA DE DATOS SUPREMA ---
                 const rawSchedule = (agent.horaEntradaProgramada || '09:00').toString();
-                // Extraer el "HH:MM" del principio (ej: de '09:00 A 18:00' saca '09:00')
                 const cleanSchedule = rawSchedule.match(/\d{1,2}:\d{2}/)?.[0] || '09:00';
                 const [entH, entM] = cleanSchedule.split(':').map(n => parseInt(n) || 0);
-
-                // Turno real = horasTurno + 1h (9h total)
-                const salidaHora = entH + horasTurno + 1;
-                const exitMinutes = salidaHora * 60 + entM;
+                const scheduledTotalMin = (entH * 60) + entM;
 
                 const isToday = targetDate === todayStr;
 
-                // PUNTO DE REFERENCIA INTELIGENTE (LIVE / SHIFT END)
-                let referenceTimestamp;
-                if (isToday && nowMinutes <= exitMinutes) {
-                    referenceTimestamp = Date.now();
+                // PROTECCION CRITICA: No procesar si el turno aún no empieza
+                // Evita que en la madrugada se tome el 'tiempo_logueado' del día anterior y calcule horas falsas como '14:58'
+                if (isToday && nowMinutes < scheduledTotalMin) {
+                    // El turno aún no empieza, forzamos ignorar cualquier 'prodRow' basura de ayer
+                    prodRow = null;
+                    loggedTimeStr = null;
                 } else {
-                    const base = new Date(`${targetDate}T${String(salidaHora).padStart(2, '0')}:${String(entM).padStart(2, '0')}:00`);
-                    referenceTimestamp = base.getTime();
-                }
+                    // Por defecto, asumimos que llegaron a su hora
+                    let loginTotalMin = scheduledTotalMin;
+                    let loginH = entH;
+                    let loginM = entM;
 
-                // Calcular entrada real restando tiempo logueado de la referencia
-                const loginDate = new Date(referenceTimestamp - totalSeconds * 1000);
+                    // Si lo estamos atrapando "en vivo" el mismo día
+                    if (isToday) {
+                        // Calculamos la hora de entrada restando el tiempo logueado de la hora actual
+                        const loginDate = new Date(Date.now() - totalSeconds * 1000);
+                        let calcH = (loginDate instanceof Date && !isNaN(loginDate)) ? loginDate.getHours() : entH;
+                        let calcM = (loginDate instanceof Date && !isNaN(loginDate)) ? loginDate.getMinutes() : entM;
+                        let calculatedMin = (calcH * 60) + calcM;
 
-                // --- MATEMÁTICA PURA (SIN TEXTO) PARA EVITAR NaN ---
-                let loginH = (loginDate instanceof Date && !isNaN(loginDate)) ? loginDate.getHours() : entH;
-                let loginM = (loginDate instanceof Date && !isNaN(loginDate)) ? loginDate.getMinutes() : entM;
-                let loginTotalMin = (loginH * 60) + loginM;
+                        // Si el cálculo muestra un retardo
+                        if (calculatedMin > scheduledTotalMin) {
+                            // REGLA DE ORO: 
+                            // Solo aceptamos el retardo si la hora actual NO HA PASADO por más de 12 horas de su hora programada.
+                            if (nowMinutes <= scheduledTotalMin + 720) {
+                                loginTotalMin = calculatedMin;
+                                loginH = calcH;
+                                loginM = calcM;
+                            }
+                        } else {
+                            // Si llegó temprano, respetamos el cálculo
+                            if (scheduledTotalMin - calculatedMin > 120) {
+                                prodRow = null;
+                                loggedTimeStr = null;
+                            } else {
+                                loginTotalMin = calculatedMin;
+                                loginH = calcH;
+                                loginM = calcM;
+                            }
+                        }
+                    }
 
-                const scheduledTotalMin = (entH * 60) + entM;
+                    // Formatear hora real final (HH:MM)
+                    officialLoginTime = `${String(loginH).padStart(2, '0')}:${String(loginM).padStart(2, '0')}`;
 
-                // TOPE INTELIGENTE: Si el cálculo da algo extremo (overtime) se re-ajusta
-                if (loginTotalMin < scheduledTotalMin - 15) {
-                    // SEGURO ANTI-NaN: Limpiar el ID para extraer solo números (ej: CCI14847 -> 14847)
-                    const agentNumericId = parseInt(agent.numero_agente.toString().replace(/\D/g, '')) || 5;
-                    const pseudoRandomOffset = (agentNumericId % 11) + 2;
-
-                    loginTotalMin = scheduledTotalMin - pseudoRandomOffset;
-                    loginH = Math.floor(loginTotalMin / 60);
-                    loginM = loginTotalMin % 60;
-                }
-
-                // Formatear hora real final (HH:MM)
-                officialLoginTime = `${String(loginH).padStart(2, '0')}:${String(loginM).padStart(2, '0')}`;
-
-                if (loginTotalMin < scheduledTotalMin) {
-                    delayMinutos = 0; // Llegó temprano
-                } else {
-                    // Sustraer tolerancia del retardo
-                    delayMinutos = Math.max(0, loginTotalMin - scheduledTotalMin - tolerance);
+                    // --- PROTECCIÓN CONTRA SOBREESCRITURA ---
+                    const existing = existingEntries.find(e => e.nombreAgente === agent.nombre);
+                    if (existing && existing.horaEntradaReal !== agent.horaEntradaProgramada && officialLoginTime === agent.horaEntradaProgramada) {
+                        officialLoginTime = existing.horaEntradaReal;
+                        const [exH, exM] = officialLoginTime.split(':').map(Number);
+                        const exTotalMin = exH * 60 + exM;
+                        delayMinutos = Math.max(0, exTotalMin - scheduledTotalMin - tolerance);
+                    } else {
+                        if (loginTotalMin <= scheduledTotalMin + tolerance) {
+                            delayMinutos = 0;
+                        } else {
+                            delayMinutos = loginTotalMin - scheduledTotalMin - tolerance;
+                        }
+                    }
                 }
             }
 

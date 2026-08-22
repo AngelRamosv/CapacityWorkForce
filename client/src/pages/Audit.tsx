@@ -30,18 +30,18 @@ const Audit: React.FC = () => {
             const total = changes.balance?.totalAllocated || 'N/A';
             return (
                 <div className="space-y-2">
-                    <p className="text-indigo-600 font-bold flex items-center gap-1">
+                    <p className="text-indigo-400 font-bold flex items-center gap-1">
                         <ListChecks size={12} /> Plan de Capacidad Generado
                     </p>
                     <div className="grid grid-cols-4 gap-2">
                         {days.map(day => (
-                            <div key={day} className="bg-white p-1 rounded-lg border border-gray-100 text-center">
-                                <p className="text-[8px] text-gray-400 font-black uppercase">{day.substring(0, 3)}</p>
-                                <p className="text-xs font-black text-gray-700">{changes.distribucion[day].planned}</p>
+                            <div key={day} className="bg-[#161a22] p-1 rounded-lg border border-slate-800 text-center">
+                                <p className="text-[8px] text-slate-500 font-black uppercase">{day.substring(0, 3)}</p>
+                                <p className="text-xs font-black text-slate-200">{changes.distribucion[day].planned}</p>
                             </div>
                         ))}
                     </div>
-                    <p className="text-[10px] text-gray-400 font-medium italic">
+                    <p className="text-[10px] text-slate-500 font-medium italic">
                         Métrica final: {total} jornadas totales. Balance: {changes.balance?.message || 'Correcto'}.
                     </p>
                 </div>
@@ -50,7 +50,7 @@ const Audit: React.FC = () => {
 
         // Si es cualquier otro cambio (general)
         return (
-            <div className="bg-white p-3 rounded-xl border border-gray-100 italic text-gray-600 text-[11px] leading-relaxed">
+            <div className="bg-[#161a22] p-3 rounded-xl border border-slate-800 italic text-slate-300 text-[11px] leading-relaxed">
                 {JSON.stringify(changes).replace(/[{}"]/g, ' ').trim()}
             </div>
         );
@@ -81,15 +81,15 @@ const Audit: React.FC = () => {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
-                        <ShieldCheck className="text-indigo-600" />
+                    <h1 className="text-3xl font-black text-slate-50 flex items-center gap-3">
+                        <ShieldCheck className="text-indigo-400" />
                         Registro de Auditoría
                     </h1>
                 </div>
                 <div className="flex gap-3">
                     <button
                         onClick={fetchLogs}
-                        className="bg-white text-gray-600 px-4 py-3 rounded-2xl font-bold border border-gray-100 hover:bg-gray-50 transition active:scale-95 flex items-center gap-2"
+                        className="bg-[#161a22] text-slate-300 px-4 py-3 rounded-2xl font-bold border border-slate-800 hover:bg-[#0e1117] transition active:scale-95 flex items-center gap-2"
                         title="Refrescar"
                     >
                         <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
@@ -101,14 +101,14 @@ const Audit: React.FC = () => {
                                 fetchLogs();
                             }
                         }}
-                        className="bg-rose-50 text-rose-600 px-6 py-3 rounded-2xl font-bold border border-rose-100 hover:bg-rose-100 transition active:scale-95 flex items-center gap-2"
+                        className="bg-rose-900/20 text-rose-400 px-6 py-3 rounded-2xl font-bold border border-rose-100 hover:bg-rose-100 transition active:scale-95 flex items-center gap-2"
                     >
                         <Trash2 size={18} />
                         Limpiar Historial
                     </button>
                     <button
                         onClick={exportToCSV}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 active:scale-95"
+                        className="bg-indigo-500 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold transition shadow-lg shadow-indigo-900/20 flex items-center justify-center gap-2 active:scale-95"
                     >
                         <Download size={18} />
                         Exportar reporte CSV
@@ -116,49 +116,49 @@ const Audit: React.FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-[#161a22] rounded-3xl shadow-sm border border-slate-800 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-gray-50/50 border-b border-gray-100">
-                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                            <tr className="bg-slate-800/30 border-b border-slate-800">
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                     <div className="flex items-center gap-2"><Clock size={12} /> Fecha y Hora</div>
                                 </th>
-                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                     <div className="flex items-center gap-2"><Database size={12} /> Entidad</div>
                                 </th>
-                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                     <div className="flex items-center gap-2"><Tag size={12} /> Acción</div>
                                 </th>
-                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                     <div className="flex items-center gap-2"><Info size={12} /> Detalles del Cambio</div>
                                 </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-slate-800/50">
                             {logs.map(log => (
-                                <tr key={log.id} className="hover:bg-gray-50/50 transition-colors group">
+                                <tr key={log.id} className="hover:bg-slate-800/30 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap align-top">
-                                        <p className="text-sm font-bold text-gray-700">
+                                        <p className="text-sm font-bold text-slate-200">
                                             {new Date(log.createdAt).toLocaleDateString()}
                                         </p>
-                                        <p className="text-[10px] text-gray-400 font-medium">
+                                        <p className="text-[10px] text-slate-500 font-medium">
                                             {new Date(log.createdAt).toLocaleTimeString()}
                                         </p>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap align-top">
-                                        <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-tighter">
+                                        <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-tighter">
                                             {log.nombreEntidad}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap align-top">
-                                        <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-tighter ${log.accion === 'Creado' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                                        <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-tighter ${log.accion === 'Creado' ? 'bg-emerald-900/20 text-emerald-400' : 'bg-amber-900/20 text-amber-400'
                                             }`}>
                                             {log.accion}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 align-top">
-                                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
+                                        <div className="bg-slate-800/30 p-4 rounded-2xl border border-slate-800 group-hover:bg-[#161a22] transition-colors">
                                             {formatChanges(log.cambios)}
                                         </div>
                                     </td>
@@ -167,7 +167,7 @@ const Audit: React.FC = () => {
                             {logs.length === 0 && !isLoading && (
                                 <tr>
                                     <td colSpan={4} className="py-20 text-center">
-                                        <p className="text-gray-400 italic">No hay registros aún.</p>
+                                        <p className="text-slate-500 italic">No hay registros aún.</p>
                                     </td>
                                 </tr>
                             )}
