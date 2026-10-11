@@ -29,7 +29,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                                 Plan
                             </Link>
                             <Link to="/live" className={isActive('/live') ? liveActiveClass : liveNormalClass}>
-                                <div className={`w-2 h-2 rounded-full mr-2 ${isActive('/live') ? 'bg-rose-600 animate-pulse' : 'bg-rose-400'}`} />
+                                <div className={`w-2 h-2 rounded-full mr-2 ${isActive('/live') ? 'bg-rose-600' : 'bg-rose-400'}`} />
                                 Live
                             </Link>
                             <Link to="/setup" className={isActive('/setup') ? activeClass : normalClass}>

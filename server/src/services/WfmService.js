@@ -5,23 +5,29 @@ class WfmService {
      */
     static calculateZeroSumBalance(totalAgents, distribution) {
         let totalAllocated = 0;
+        let isObjectFormat = false;
 
         // Iterar por los 7 días
         for (const [day, data] of Object.entries(distribution)) {
-            // REGLA: Lunes y Martes NO HAY DESCANSOS ni VACACIONES (Spec 1.2)
-            if ((day === 'Monday' || day === 'Tuesday') && (data.rest > 0 || data.vacation > 0)) {
-                return {
-                    isBalanced: false,
-                    totalAllocated,
-                    weeklyTotalCapacity,
-                    delta: 0,
-                    message: `ERROR: No está permitido asignar DESCANSOS ni VACACIONES los días Lunes o Martes.`
-                };
+            if (typeof data === 'number') {
+                totalAllocated += data;
+            } else if (data && typeof data === 'object') {
+                isObjectFormat = true;
+                // REGLA: Lunes y Martes NO HAY DESCANSOS ni VACACIONES (Spec 1.2)
+                if ((day === 'Monday' || day === 'Tuesday') && (data.rest > 0 || data.vacation > 0)) {
+                    return {
+                        isBalanced: false,
+                        totalAllocated,
+                        weeklyTotalCapacity: totalAgents * 7,
+                        delta: 0,
+                        message: `ERROR: No está permitido asignar DESCANSOS ni VACACIONES los días Lunes o Martes.`
+                    };
+                }
+                totalAllocated += (data.planned || 0) + (data.rest || 0) + (data.vacation || 0);
             }
-            totalAllocated += (data.planned || 0) + (data.rest || 0) + (data.vacation || 0);
         }
 
-        const weeklyTotalCapacity = totalAgents * 7;
+        const weeklyTotalCapacity = isObjectFormat ? (totalAgents * 7) : (totalAgents * 6);
         const delta = weeklyTotalCapacity - totalAllocated;
 
         return {

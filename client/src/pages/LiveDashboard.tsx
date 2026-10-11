@@ -385,7 +385,6 @@ const LiveDashboard: React.FC = () => {
 
                     {/* MÓDULO DE RETARDOS Y DESVIACIONES */}
                     <div className="bg-[#161a22] p-6 rounded-3xl shadow-sm border border-slate-800 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-100 to-transparent -mr-8 -mt-8 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-4">
                                 <Clock className="text-amber-500" size={18} />
